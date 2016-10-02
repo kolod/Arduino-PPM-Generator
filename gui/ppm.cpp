@@ -1,5 +1,5 @@
 ﻿//    Arduino PPM Generator
-//    Copyright (C) 2015  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
+//    Copyright (C) 2015-2016  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU General Public License as published by
@@ -15,192 +15,157 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <stdarg.h>
+#include <math.h>
+
 #include <QDebug>
 
 #include "ppm.h"
 
-
-enum {
-	kStart,             // Запустить генерацию
-	kStop,              // Остановить генерацию
-	kSetChanelsCount,   // Установить количество каналов
-	kSetPause,          // Установить длительности паузы           (в импульсах несущей частоты ШИМ или ×0.0625 мксек)
-	kSetChanel,         // Установить длительности канала          (в импульсах несущей частоты ШИМ или ×0.0625 мксек)
-	kSetSync,           // Установить длительность синхроимпульса  (в импульсах несущей частоты ШИМ или ×0.0625 мксек)
-	kGetFreaquency,     // Запрос частоты ШИМ
-	kError,
-	kFreaquency
-};
-
 ppm::ppm(QObject *parent)
 	: QObject(parent)
-	, p(0)
-	, mQuant(0.0)
+	, mClient(nullptr)
+	, mAddress(1)
+	, mRun(false)
+	, mRuning(false)
+	, mInversion(false)
+	, mQuant(0)
 	, mMinimum(0.0)
 	, mMaximum(0.0)
 	, mPause(0.0)
 	, mPeriod(0.0)
 {}
 
-bool ppm::isReady()
+void ppm::setModbusClient(QModbusClient *client)
 {
-	if (p == 0) return false;
-	if (mChannel.count() == 0) return false;
-	if (mQuant   == 0.0) return false;
-	if (mMinimum == 0.0) return false;
-	if (mMaximum == 0.0) return false;
-	if (mPause   == 0.0) return false;
-	if (mPeriod  == 0.0) return false;
-
-	return true;
+	mClient = client;
+	connect(mClient, &QModbusClient::stateChanged, this, [this] {
+		if (mClient->state() == QModbusDevice::ConnectedState) {
+			emit deviceConnected();
+			update();
+		} else {
+			emit deviceDisconnected();
+		}
+	});
 }
 
-void ppm::updateSync()
+// Передать новые параметры в устройство, если соблюдены все условия
+void ppm::update()
 {
-	double sync = mPeriod;
-	for (int i = 0; i < mChannel.count(); i++) {
-		sync -= mMinimum + mChannel[i] * (mMaximum - mMinimum) / 100;
+	qDebug() << "update";
+
+	if (
+		(mClient != nullptr) &&
+		(mClient->state() == QModbusDevice::ConnectedState) &&
+		(mChannel.count() > 0) &&
+		(mPause > 0) &&
+		(mPause < mMinimum) &&
+		(mMinimum > 0) &&
+		(mMinimum < mMaximum)
+	) {
+		if (mQuant > 0) {
+
+			qDebug() << "good";
+
+			auto request = QModbusDataUnit(QModbusDataUnit::HoldingRegisters, REG_STATE, 5 + mChannel.count());
+			auto sync = quint32(mPeriod * mQuant);
+			auto minSync = quint32(mMaximum * mQuant + 1);
+
+			qDebug() << mQuant << mChannel << mPause;
+
+			int index = 5;
+			for (int i = 0; i < mChannel.count(); i++) {
+				auto channel = uint16_t((mMinimum + mChannel[i] * (mMaximum - mMinimum) / 100) * mQuant);
+				sync -= uint32_t(channel);
+				request.setValue(index++, channel);
+				if (sync < minSync) {
+					qDebug() << "sync2small" << sync << minSync;
+					emit sync2small();
+					return;
+				}
+			}
+
+			request.setValue(0, mRun ? mInversion ? 2 : 1 : 0);
+			request.setValue(1, mChannel.count());
+			request.setValue(2, uint16_t(mPause * mQuant));
+			request.setValue(3, quint16(sync & 0x0000FFFF));
+			request.setValue(4, quint16(sync >> 16 & 0x0000FFFF));
+
+			qDebug() << request.values();
+
+			auto *reply = mClient->sendWriteRequest(request, mAddress);
+			if (reply) {
+				if (reply->isFinished()) {
+					reply->deleteLater();
+				} else {
+					connect(reply, &QModbusReply::finished, this, [this, reply] {
+						if (reply->error() == QModbusDevice::NoError) {
+							emit updated();
+							if (mRun != mRuning) {
+								if (mRun) emit started(); else emit stoped();
+								mRuning = mRun;
+							}
+						}
+						reply->deleteLater();
+					});
+				}
+			} else {
+				delete reply;
+			}
+		} else {
+			readQuant();
+		}
 	}
-
-	write(kSetSync, qRound(sync / mQuant));
 }
 
-void ppm::updateAll()
-{
-	if (!isReady()) return;
-
-	for (int i = 0; i < mChannel.count(); i++) {
-		write(kSetChanel, i, qRound((mMinimum + mChannel[i] * (mMaximum - mMinimum) / 100) / mQuant));
-	}
-
-	write(kSetPause, qRound(mPause / mQuant));
-	write(kSetChanelsCount, mChannel.count());
-	updateSync();
-}
-
-void ppm::setPort(QIODevice *port)
-{
-	p = port;
-}
-
+// Установить количество каналов
 void ppm::setChannelsCount(int count)
 {
 	int oldCount = mChannel.count();
 	mChannel.resize(count);
-
-	if (oldCount < count) for (int i = oldCount; i < count; i++) {
-		mChannel[i] = 0.0;
-	}
-
-	updateAll();
+	for (int i = oldCount; i < count; mChannel[i++] = 0.0);
+	update();
 }
 
-void ppm::setPeriod(double period)
-{
-	mPeriod = period;
-	if (isReady()) updateSync();
-}
-
-void ppm::setPause(double pause)
-{
-	mPause = pause;
-	write(kSetPause, qRound(pause / mQuant));
-}
-
-void ppm::setMinimum(double minimum)
-{
-	mMinimum = minimum;
-	updateAll();
-}
-
-void ppm::setMaximum(double maximum)
-{
-	mMaximum = maximum;
-	updateAll();
-}
-
+// Установит значение канала в %
 void ppm::setChanelValue(int chanel, double value)
 {
-	if (chanel < 0) return;
-	if (chanel >= mChannel.count()) return;
-	mChannel[chanel] = qBound(0.0, value, 100.0);
-
-	if (isReady()) {
-		write(kSetChanel, chanel, qRound((mMinimum + value * (mMaximum - mMinimum) / 100) / mQuant));
-		updateSync();
+	if ((chanel >= 0) && (chanel < mChannel.count())) {
+		mChannel[chanel] = qBound(0.0, value, 100.0);
+		update();
 	}
 }
 
-void ppm::start()
+void ppm::readQuant()
 {
-	write(kStart);
-}
+	qDebug() << "readQuant";
 
-void ppm::stop()
-{
-	write(kStop);
-}
+	auto request = QModbusDataUnit(QModbusDataUnit::HoldingRegisters, REG_QUANT, 1);
+	auto *reply = mClient->sendReadRequest(request, mAddress);
+	if (reply) {
+		if (reply->isFinished()) {
+			reply->deleteLater();
+		} else {
+			connect(reply, &QModbusReply::finished, this, [this, reply] {
+				qDebug() << "onReadQuant" << reply->error() << reply->errorString();
 
-//
-void ppm::updateFrequency()
-{
-	if (p->isWritable()) {
-		connect(p, SIGNAL(readyRead()), SLOT(onReadyRead()));
-		write(kGetFreaquency);
+				if (reply->error() == QModbusDevice::NoError) {
+					auto result = reply->result();
+					if (result.valueCount() > 0) {
+						mQuant = result.value(0) * 1000;
+						emit maxPulseLengthChanged(maxPulseLength());
+						qDebug() << mQuant;
+						update();
+					}
+				}
+			});
+		}
+	} else {
+		delete reply;
 	}
 }
 
-// Передача данных контроллеру
-void ppm::write(QString command)
+double ppm::maxPulseLength()
 {
-	qDebug() << command;
-
-	if (p && p->isOpen() && p->isWritable()) {
-		p->write(command.toLatin1());
-	}
-}
-
-void ppm::write(int command)
-{
-	write(QString("%1;").arg(command));
-}
-
-void ppm::write(int command, int value)
-{
-	write(QString("%1,%2;").arg(command).arg(value));
-}
-
-void ppm::write(int command, int channel, int value)
-{
-	write(QString("%1,%2,%3;").arg(command).arg(channel).arg(value));
-}
-
-// Получение данных из контроллера
-void ppm::read(int command)
-{
-	if (p && p->isOpen() && p->isWritable()) {
-
-		QString str = QString("%1;").arg(command);
-
-		qDebug() << str;
-		p->write(str.toLatin1());
-	}
-}
-
-void ppm::onReadyRead()
-{
-	QString str = QString::fromLatin1(p->readAll());
-	QStringList list = str.remove(";").split(",");
-
-	int command = list[0].toInt();
-
-	switch (command) {
-	case kError:
-		qDebug() << list;
-		break;
-
-	case kFreaquency:
-		mQuant = 1000.0 / list[1].toDouble();
-		updateAll();
-	}
+	if (mQuant > 0.0) return floor((double) 0xFFFF / mQuant);
+	return 100000.0;
 }

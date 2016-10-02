@@ -1,5 +1,5 @@
 //    Arduino PPM Generator
-//    Copyright (C) 2015  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
+//    Copyright (C) 2015-2016  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU General Public License as published by
@@ -14,189 +14,161 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include "ModbusSlave.h"
 
-#include <CmdMessenger.h>
+// Максимальное количество каналов
+#define MAX_COUNT 16     
 
-// Attach a new CmdMessenger object to the default Serial port
-CmdMessenger cmdMessenger = CmdMessenger(Serial);
-
-#define MAX_CHANEL_COUNT   16          // Максимальное количество каналов
-
-enum {
-	kStart,                            // Запустить генерацию
-	kStop,                             // Остановить генерацию
-	kSetChannelsCount,                 // Установить количество каналов
-	kSetPause,                         // Установить длительности паузы           (в импульсах несущей частоты ШИМ или ×0.0625 мксек)
-	kSetChannel,                       // Установить длительности канала          (в импульсах несущей частоты ШИМ или ×0.0625 мксек)
-	kSetSync,                          // Установить длительность синхроимпульса  (в импульсах несущей частоты ШИМ или ×0.0625 мксек)
-	kGetFreaquency,                    // Запрос частоты ШИМ
-	kError,
-	kFreaquency
+enum State {
+  Pulse,             // Импульс n-го канала
+  StartSync,         // Начало синхроимпульса
+  ContinueSync,      // Продолжение синхроимпульса
+  FinishSync         // окончание синхроимпульса
 };
 
-typedef struct {
-	byte count;                        // Количество каналов
-	word chanel[MAX_CHANEL_COUNT];     // Длительности паузы           (в импульсах несущей частоты ШИМ или ×0.0625 мксек)
-	word pause;                        // Длительности канала          (в импульсах несущей частоты ШИМ или ×0.0625 мксек)
-	union {
-		long sync;                 // Длительность синхроимпульса  (в импульсах несущей частоты ШИМ или ×0.0625 мксек)
-		struct {
-			word sync_lo;
-			word sync_hi;
-		};
-	};                       
-} TPPM;
+// little endian
+typedef union {
+  unsigned long raw;
+  struct {
+    word low;
+    word high;
+  };
+} long_t;
 
-byte current = 0; // Текущий номер канала
-TPPM tmp;         // Временный набор данных
-TPPM ppm;         // Рабочий набор данных
+typedef union __attribute__ ((packed)) {
+  word raw[];
+  struct __attribute__ ((packed)) {
+    word quant;               // 1 мксек в тактах системной частоты
+    word max_count;           // Мксимальное количество каналлов
+    word state;               // 2 - Вкл. (инверсия) / 1 - Вкл. / 0 - Выкл.
+    word count;               // Количество каналов (0 ... MAX_COUNT)
+    word pause;               // Длительности паузы (в тактах системной частоты)
+    long_t sync;              // Длительность импульса синхронизации (в тактах системной частоты)
+    word channel[MAX_COUNT];  // Длительности импульсов (в тактах системной частоты)
+  };
+} regs_t;
+
+regs_t tmp;                   // Временный набор данных
+regs_t ppm;                   // Рабочий набор данных
+volatile byte state = Pulse;  // Текущее состояние
+volatile byte current = 0;    // Текущий номер канала
+
+byte const modbus_registers_count = sizeof(regs_t) / sizeof(word);
+
+word modbus_get_register(word id) {
+	return tmp.raw[id];
+}
+
+void modbus_set_register(word id, word value) {
+  digitalWrite(9, HIGH);
+	if (id > 1) tmp.raw[id] = value;
+
+//  Serial.println(id);
+//  Serial.println(value);  
+  
+  digitalWrite(9, LOW);
+}
 
 // Инициализация контроллера
 void setup() {
 	// Инициализация периферии
-	pinMode(9, OUTPUT);
-        pinMode(10, OUTPUT);
+  pinMode(9, OUTPUT);         // Debug
+  pinMode(10, OUTPUT);        // PPM
+  digitalWrite(10, HIGH);
 
-	// Инициализация значений каналов
-	tmp.count = 8;                   // 8 каналов
-	tmp.pause = 250*16;              // Пауза 250 мксек
-	tmp.sync  = long(22500 - 8*300)*16;  // Длительность полного периода PPM 22,5 мсек
+  // Инициализация значений каналов
+  tmp.state        = 0;
+  tmp.max_count    = MAX_COUNT;
+  tmp.count        = 8;
+  tmp.quant        = F_CPU / 1000000;
+  tmp.pause        = F_CPU / 1000000 * 200;
+  tmp.sync.raw     = F_CPU / 1000000 * 22500 - F_CPU / 1000000 * 300 * 8;
+  
+  // Длительность канала 300 мксек
+  for (byte i = 0; i < MAX_COUNT; i++) tmp.channel[i] = 300 * (unsigned long) tmp.quant;
 
-	// Длительность канала 300 мксек
-	for (byte i = 0; i < MAX_CHANEL_COUNT; i++) tmp.chanel[i] = 300*16;
+  // Настраиваем MODBUS
+  modbus_start();
 
-	// Настройка связи в ПК
-	Serial.begin(115200);
-	cmdMessenger.attach(OnUnknownCommand);
-	cmdMessenger.attach(kStart, OnStart);                       // Запустить генерацию
-	cmdMessenger.attach(kStop, OnStop);                         // Остановить генерацию
-	cmdMessenger.attach(kSetChannelsCount, OnSetChannelsCount);   // Установить количество каналов
-	cmdMessenger.attach(kSetPause, OnSetPause);                 // Установить длительности паузы, мксек
-	cmdMessenger.attach(kSetChannel, OnSetChannel);               // Установить длительности канала, мксек
-	cmdMessenger.attach(kSetSync, OnSetSync);                   // Установить длительность синхроимпульса, мксек
-	cmdMessenger.attach(kGetFreaquency, OnGetFreaquency);       // Запрос частоты ШИМ
-
-	// Запуск генерации с значениями по-умолчанию
-	OnStart();
+ 
+  Serial.println(tmp.state);
+  Serial.println(tmp.count);
+  Serial.println(tmp.pause);
+  Serial.println(tmp.sync.low);
+  Serial.println(tmp.sync.high);
+  Serial.println(tmp.sync.raw);
+  for (byte i = 0; i < MAX_COUNT; i++) {
+    Serial.println(tmp.channel[i]);
+  }
 }
 
 // Основной цикл
 void loop() {
-	cmdMessenger.feedinSerialData();
+	word lastState = tmp.state;
+	modbus_update();
+	if (lastState != tmp.state) {
+		tmp.state > 0 ? Start() : Stop();
+	}
 }
 
-byte state = 0;
+// Запустить генерацию
+void Start() {
+  
+	cli();                                           // Глобальный запрет прерываний
+	ppm = tmp;          
+	TIMSK1 = B00000001;                              // Разрешение прерывания от таймера
+	TCCR1A = ppm.state == 2 ? B00110011 : B00100011; // FAST PWM MODE 15
+	TCCR1B = B00011001;                              // Предделитель = 1
+	TCCR1C = B00000000;                              //
+	OCR1A  = ppm.channel[0];                         // Длительность первого импульса c паузой
+	OCR1B  = ppm.channel[0] - ppm.pause;             // Длительность первого импульса без паузы
+	current = 1;                                     //
+	sei();                                           // Глобальное разрешение прерываний
+}
 
-enum State {
-	Pulse,             // Импульс n-го канала
-	StartSync,         // Начало синхроимпульса
-	ContinueSync,      // Продолжение синхроимпульса
-	FinishSync         // окончание синхроимпульса
-};
+// Остановить генерацию
+void Stop() {
+	cli();             // Глобальный запрет прерываний
+	TCCR1B = 0;        // Останавливаем счетчик
+	TIMSK1 = 0;        // Отключаем прерывание
+	sei();             // Глобальное разрешение прерываний
+}
 
 // Прерывание при переполнении
-ISR(TIMER1_OVF_vect) {  
+ISR(TIMER1_OVF_vect) {
+
 	switch (state) {
 		
 	// Импульс n-го канала
-	case Pulse:
-		// Длительность текущего импульса c паузой
-		OCR1A = ppm.chanel[current];   
+	case Pulse:		
+		OCR1A = ppm.channel[current];                 // Длительность текущего импульса c паузой
+		OCR1B = ppm.channel[current] - ppm.pause;     // Длительность текущего импульса без паузы  
 
-		// Длительность текущего импульса без паузы                         
-		OCR1B = ppm.chanel[current++] - ppm.pause;              
+	  // Переходим к формированию синхроимпульса
+	  if (++current == ppm.count) state = (ppm.sync.high == 0) ? FinishSync : ppm.sync.low > ppm.pause ? ContinueSync : StartSync;                               
+	  break;
 
-	  	// Переходим к формированию синхроимпульса
-	  	if (current == ppm.count) {                                 
-	  		if (ppm.sync_hi == 0) {
-	  		    state = FinishSync;
-	  		} else if(ppm.sync_lo > ppm.pause) {
-	  			state = ContinueSync;
-	  		} else {
-	  			state = StartSync;
-	  		}
-	  	}
-	  	break;
-
-	// Начало синхроимпульса
+	// Если младшие ppm.sync.low меньше чем ppm.pause, то начинаем импульс длительностью ppm.pause и
+  // уже на следующем проходе ppm.sync.low будет больше ppm.pause
 	case StartSync:
-		OCR1A = ppm.pause - ppm.sync_lo + 1;
-		OCR1B = ppm.pause - ppm.sync_lo + 1;
-		ppm.sync -= long(ppm.pause - ppm.sync_lo + 1);
-		state = (ppm.sync_hi == 0) ? FinishSync : ContinueSync;
+    OCR1B = OCR1A = ppm.pause;
+ 		ppm.sync.raw -= ppm.pause;
+		state = ppm.sync.high ? ContinueSync : FinishSync;
 		break;
 
-	// Продолжение синхроимпульса
+	// Если ppm.sync.high > 0 начинаем импульс максимальной длительности
 	case ContinueSync: 
-		OCR1A = 0xFFFF;                      
-		OCR1B = 0xFFFF;               
-		if (--ppm.sync_hi == 0) state = FinishSync;
+		OCR1A = OCR1B = 0xFFFF;       
+		if (--ppm.sync.high == 0) state = FinishSync;
 		break;
 
 	// Завершение синхроимпульса
 	case FinishSync: 
-		OCR1A = ppm.sync_lo;
-		OCR1B = ppm.sync_lo - ppm.pause;
+		OCR1A = ppm.sync.low;
+		OCR1B = ppm.sync.low - ppm.pause;
+    ppm = tmp;
 		state = Pulse;
 		current = 0;
-		ppm = tmp;
 	}
-}
-
-void OnUnknownCommand()
-{
-	cmdMessenger.sendCmd(kError, "Command without attached callback");
-}
-
-// Запустить генерацию
-void OnStart() {
-	cli();                                     // Глобальный запрет прерываний
-	ppm    = tmp;                              //                        
-	TIMSK1 = B00000001;                        // Разрешение прерывания от таймера
-	TCCR1A = B10100011;                        // FAST PWM MODE 15
-	TCCR1B = B00011001;                        // Предделитель 8(запуск таймера)
-	TCCR1C = B00000000;
-	OCR1A  = ppm.chanel[0];                    // Длительность первого импульса c паузой
-	OCR1B  = ppm.chanel[0] - ppm.pause;        // Длительность первого импульса без паузы
-	current = 1;
-	sei();                                     // Глобальное разрешение прерываний
-}
-
-// Остановить генерацию
-void OnStop() {
-	cli();                                     // Глобальный запрет прерываний
-	TCCR1B = 0;                                // Останавливаем счетчик
-	TIMSK1 = 0;                                // Отключаем прерывание
-	sei();                                     // Глобальное разрешение прерываний
-}
-
-// Установить количество каналов
-void OnSetChannelsCount() {
-	tmp.count = cmdMessenger.readInt16Arg();
-}
-
-// Установить длительности паузы, мксек
-void OnSetPause() {
-	tmp.pause = cmdMessenger.readInt16Arg();
-	for (byte i = 0; i < tmp.count; i++) tmp.chanel[i] = max(tmp.chanel[i], tmp.pause);
-}
-
-// Установить длительности канала, мксек
-void OnSetChannel() {
-	byte chanel = cmdMessenger.readInt16Arg();
-	word value  = cmdMessenger.readInt16Arg();
-	if (chanel < MAX_CHANEL_COUNT) {
-		tmp.chanel[chanel] = value;
-	}
-}
-
-// Установить длительность синхроимпульса, мксек
-void OnSetSync() {
-	tmp.sync = cmdMessenger.readInt32Arg();
-}  
-
-// Запрос частоты ШИМ
-void OnGetFreaquency() {
-	cmdMessenger.sendCmd(kFreaquency, 16000000); // 16 МГц
 }
 

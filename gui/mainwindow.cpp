@@ -1,5 +1,5 @@
 ﻿//    Arduino PPM Generator
-//    Copyright (C) 2015  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
+//    Copyright (C) 2015-2016  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU General Public License as published by
@@ -15,17 +15,67 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "mainwindow.h"
-#include <math.h>
-#include <limits>
+#include <QtMath>
 
 #include <QDebug>
 
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
+MainWindow::MainWindow(QWidget *parent)
+	: QMainWindow(parent)
+	, isStarted(false)
 {
+	mClient = new QModbusRtuSerialMaster();
+	mClient->setNumberOfRetries(1);
+
+	devise.setModbusClient(mClient);
+
 	setupUi();
 	retranslateUi();
 
-	devise.setPort(&port);
+	connect(inputStartStop, &QPushButton::clicked, this, [this] {
+		if (isStarted) devise.stop(); else devise.start();
+	});
+
+	connect(inputInversion, &QCheckBox::toggled, this, [this] (bool invert) {
+		devise.setInversion(invert);
+		drawPlot();
+	});
+
+	connect(&devise, &ppm::started, this, [this] {
+		isStarted = true;
+		inputStartStop->setText(tr("Stop"));
+	});
+
+	connect(&devise, &ppm::stoped, this, [this] {
+		isStarted = false;
+		inputStartStop->setText(tr("Start"));
+	});
+
+	connect(inputConnect, &QPushButton::clicked, this, [this] {
+		if (mClient->state() == QModbusDevice::ConnectedState) {
+			mClient->disconnectDevice();
+		} else {
+			mClient->setConnectionParameter(QModbusDevice::SerialPortNameParameter, inputPort->currentText());
+			mClient->setConnectionParameter(QModbusDevice::SerialParityParameter, QSerialPort::NoParity);
+			mClient->setConnectionParameter(QModbusDevice::SerialBaudRateParameter, inputSpeed->currentText().toInt());
+			mClient->setConnectionParameter(QModbusDevice::SerialDataBitsParameter, QSerialPort::Data8);
+			mClient->setConnectionParameter(QModbusDevice::SerialStopBitsParameter, QSerialPort::OneStop);
+			mClient->connectDevice();
+		}
+	});
+
+	connect(&devise, &ppm::deviceConnected, this, [this] {
+		inputConnect->setText(tr("Disconnect"));
+		inputStartStop->setEnabled(true);
+	});
+
+	connect(&devise, &ppm::deviceDisconnected, this, [this] {
+		inputConnect->setText(tr("Connect"));
+		inputStartStop->setDisabled(true);
+	});
+
+	connect(&devise, &ppm::maxPulseLengthChanged, inputMaximum, &QDoubleSpinBox::setMaximum);
+
+	connect(chartView->chart(), &QtCharts::QChart::widthChanged, this, &xAxisUpdate);
 
 	connect(inputChannelsCount, SIGNAL(valueChanged(int)),    &devise, SLOT(setChannelsCount(int)));
 	connect(inputPeriod,        SIGNAL(valueChanged(double)), &devise, SLOT(setPeriod(double)));
@@ -33,51 +83,57 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 	connect(inputMinimum,       SIGNAL(valueChanged(double)), &devise, SLOT(setMinimum(double)));
 	connect(inputMaximum,       SIGNAL(valueChanged(double)), &devise, SLOT(setMaximum(double)));
 
+	// Обновляем график
 	connect(inputPeriod,        SIGNAL(valueChanged(double)), SLOT(drawPlot()));
 	connect(inputPause,         SIGNAL(valueChanged(double)), SLOT(drawPlot()));
 	connect(inputMinimum,       SIGNAL(valueChanged(double)), SLOT(drawPlot()));
 	connect(inputMaximum,       SIGNAL(valueChanged(double)), SLOT(drawPlot()));
 
-	connect(&mapper,            SIGNAL(mapped(int)),          SLOT(onChanelValueChanged(int)));
-	connect(inputConnect,       SIGNAL(clicked()),            SLOT(connectDisconnect()));
+	// Проверяем правильность параметров, влияющих на длительность паузы
+	connect(inputPeriod,        SIGNAL(valueChanged(double)), SLOT(check()));
+	connect(inputMaximum,       SIGNAL(valueChanged(double)), SLOT(check()));
+	connect(inputChannelsCount, SIGNAL(valueChanged(int)),    SLOT(check()));
+
 	connect(inputUpdatePorts,   SIGNAL(clicked()),            SLOT(enumeratePorts()));
 	connect(inputChannelsCount, SIGNAL(valueChanged(int)),    SLOT(setupChannelsUi(int)));
 }
 
-void MainWindow::retranslateUi()
+MainWindow::~MainWindow()
 {
-	labelChannelsCount->setText(tr("Channels count:"));
-	labelPeriod->setText(tr("Period, ms:"));
-	labelPause->setText(tr("Pause, ms:"));
-	labelMinimum->setText(tr("Minimum, ms:"));
-	labelMaximum->setText(tr("Maximum, ms:"));
-	labelPort->setText(tr("Serial port:"));
-	inputUpdatePorts->setText(tr("Update"));
-	labelSpeed->setText(tr("Baud rate, Bd:"));
-	inputConnect->setText(port.isOpen() ? tr("Disconnect") : tr("Connect"));
-	labelSyncPulse->setText(tr("Sync period, ms"));
+	mClient->disconnectDevice();
+	mClient->deleteLater();
 }
 
 void MainWindow::setupUi()
 {
-	centralWidget     = new QWidget(this);
+	centralWidget      = new QWidget(this);
 
-	gridLayout        = new QGridLayout(centralWidget);
+	gridLayout         = new QGridLayout(centralWidget);
 	gridLayout->setMargin(5);
 
 	// Порт
-	labelPort         = new QLabel(centralWidget);
-	inputPort         = new QComboBox(centralWidget);
-	inputUpdatePorts  = new QPushButton(centralWidget);
+	labelPort          = new QLabel(centralWidget);
+	inputPort          = new QComboBox(centralWidget);
+	inputUpdatePorts   = new QPushButton(centralWidget);
+	inputUpdatePorts->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
 	enumeratePorts();
 
 	// Скорость
-	labelSpeed        = new QLabel(centralWidget);
-	inputSpeed        = new QComboBox(centralWidget);
-	inputConnect      = new QPushButton(centralWidget);
+	labelSpeed         = new QLabel(centralWidget);
+	inputSpeed         = new QComboBox(centralWidget);
+	inputConnect       = new QPushButton(centralWidget);
+	inputConnect->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
 	inputSpeed->setEditable(true);
 	inputSpeed->setValidator(new QIntValidator(1, 24000000, this));
 	enumerateBaudRates();
+
+	// Кнопка включения / выключения
+	inputStartStop     = new QPushButton(centralWidget);
+	inputStartStop->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+	inputStartStop->setDisabled(true);
+
+	// Инверсия PPM сигнала
+	inputInversion     = new QCheckBox(centralWidget);
 
 	// Ввод количества каналов
 	labelChannelsCount = new QLabel(centralWidget);
@@ -87,86 +143,163 @@ void MainWindow::setupUi()
 	inputChannelsCount->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
 
 	// Ввод длительности периода (мсек)
-	labelPeriod       = new QLabel(centralWidget);
-	inputPeriod       = new QDoubleSpinBox(centralWidget);
+	labelPeriod        = new QLabel(centralWidget);
+	inputPeriod        = new QDoubleSpinBox(centralWidget);
 	inputPeriod->setMinimum(0.0);
 	inputPeriod->setMaximum(100.0);
 	inputPeriod->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
 
 	// Ввод длительности паузы (мсек)
-	labelPause        = new QLabel(centralWidget);
-	inputPause        = new QDoubleSpinBox(centralWidget);
+	labelPause         = new QLabel(centralWidget);
+	inputPause         = new QDoubleSpinBox(centralWidget);
 	inputPause->setMinimum(0.0);
 	inputPause->setMaximum(10.0);
 	inputPause->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
 
 	// Ввод минимальной длительности (мсек)
-	labelMinimum      = new QLabel(centralWidget);
-	inputMinimum      = new QDoubleSpinBox(centralWidget);
+	labelMinimum       = new QLabel(centralWidget);
+	inputMinimum       = new QDoubleSpinBox(centralWidget);
 	inputMinimum->setMinimum(0.0);
 	inputMinimum->setMaximum(10.0);
 	inputMinimum->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
 
 	// Ввод максимальной длительности (мсек)
-	labelMaximum      = new QLabel(centralWidget);
-	inputMaximum      = new QDoubleSpinBox(centralWidget);
+	labelMaximum       = new QLabel(centralWidget);
+	inputMaximum       = new QDoubleSpinBox(centralWidget);
 	inputMaximum->setMinimum(0.0);
 	inputMaximum->setMaximum(10.0);
 	inputMaximum->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
 
 	// График
-	plot              = new QCustomPlot(centralWidget);
+	line               = new QtCharts::QLineSeries;
+	xAxis              = new QtCharts::QValueAxis;
+	yAxis              = new QtCharts::QValueAxis;
+	chartView          = new QtCharts::QChartView;
+
+	xAxis->setMinorTickCount(5);
+
+	yAxis->setRange(-0.01, 1.01);
+	yAxis->setTickCount(2);
+	yAxis->setMinorTickCount(5);
+	yAxis->setLabelsVisible(false);
+
+	chartView->setRenderHint(QPainter::Antialiasing);
+	chartView->chart()->addSeries(line);
+	chartView->chart()->legend()->hide();
+	chartView->chart()->setAxisX(xAxis, line);
+	chartView->chart()->setAxisY(yAxis, line);
+	chartView->setContentsMargins(-3,-3,-3,-3);
 
 	// Вывод длительности синхроимпульса (мксек)
-	labelSyncPulse    = new QLabel(centralWidget);
-	outputSyncPulse   = new QDoubleSpinBox(centralWidget);
+	labelSyncPulse     = new QLabel(centralWidget);
+	outputSyncPulse    = new QDoubleSpinBox(centralWidget);
 	outputSyncPulse->setReadOnly(true);
 	outputSyncPulse->setMinimum(0.0);
 	outputSyncPulse->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
 
-	QPen pen;
-	pen.setColor(QColor(Qt::blue));
-	pen.setStyle(Qt::SolidLine);
-	pen.setWidth(1);
-
-	curve = new QCPCurve(plot->xAxis, plot->yAxis);
-	curve->setPen(pen);
-	plot->addPlottable(curve);
-
-	plot->xAxis->setLabel(tr("Time, ms"));
-	plot->xAxis->setAutoTickStep(false);
-	plot->xAxis->setTickStep(1.0);
-
-//	plot->yAxis->setLabel(tr("PPM"));
-	plot->yAxis->setRange(-0.05, 1.05);
-	plot->yAxis->setAutoTicks(false);
-	plot->yAxis->setAutoTickLabels(false);
-	plot->yAxis->setTickVector(QVector<double>() << 0.0 << 1.0);
-	plot->yAxis->setTickVectorLabels(QVector<QString>() << "low" << "high");
-
 	// Расположение виджетов
 	gridLayout->addWidget(labelPort          , 0, 0, 1, 1);
-	gridLayout->addWidget(inputPort          , 0, 1, 1, 1);
-	gridLayout->addWidget(inputUpdatePorts   , 0, 2, 1, 1);
 	gridLayout->addWidget(labelSpeed         , 1, 0, 1, 1);
+	gridLayout->addWidget(labelChannelsCount , 2, 0, 1, 1);
+	gridLayout->addWidget(labelPeriod        , 3, 0, 1, 1);
+	gridLayout->addWidget(labelPause         , 4, 0, 1, 1);
+	gridLayout->addWidget(labelMinimum       , 5, 0, 1, 1);
+	gridLayout->addWidget(labelMaximum       , 6, 0, 1, 1);
+	gridLayout->addWidget(chartView          , 7, 0, 1, 4);
+
+	gridLayout->addWidget(labelSyncPulse     , 8, 0, 1, 1);
+
+	gridLayout->addWidget(inputPort          , 0, 1, 1, 1);
 	gridLayout->addWidget(inputSpeed         , 1, 1, 1, 1);
+	gridLayout->addWidget(inputChannelsCount , 2, 1, 1, 3);
+	gridLayout->addWidget(inputPeriod        , 3, 1, 1, 3);
+	gridLayout->addWidget(inputPause         , 4, 1, 1, 3);
+	gridLayout->addWidget(inputMinimum       , 5, 1, 1, 3);
+	gridLayout->addWidget(inputMaximum       , 6, 1, 1, 3);
+	gridLayout->addWidget(outputSyncPulse    , 8, 1, 1, 3);
+
+	gridLayout->addWidget(inputUpdatePorts   , 0, 2, 1, 1);
 	gridLayout->addWidget(inputConnect       , 1, 2, 1, 1);
 
-	gridLayout->addWidget(labelChannelsCount , 2, 0, 1, 1);
-	gridLayout->addWidget(inputChannelsCount , 2, 1, 1, 2);
-	gridLayout->addWidget(labelPeriod        , 3, 0, 1, 1);
-	gridLayout->addWidget(inputPeriod        , 3, 1, 1, 2);
-	gridLayout->addWidget(labelPause         , 4, 0, 1, 1);
-	gridLayout->addWidget(inputPause         , 4, 1, 1, 2);
-	gridLayout->addWidget(labelMinimum       , 5, 0, 1, 1);
-	gridLayout->addWidget(inputMinimum       , 5, 1, 1, 2);
-	gridLayout->addWidget(labelMaximum       , 6, 0, 1, 1);
-	gridLayout->addWidget(inputMaximum       , 6, 1, 1, 2);
-	gridLayout->addWidget(plot               , 7, 0, 1, 3);
-	gridLayout->addWidget(labelSyncPulse     , 8, 0, 1, 1);
-	gridLayout->addWidget(outputSyncPulse    , 8, 1, 1, 2);
+	gridLayout->addWidget(inputStartStop     , 0, 3, 1, 1);
+	gridLayout->addWidget(inputInversion     , 1, 3, 1, 1);
 
 	setCentralWidget(centralWidget);
+}
+
+void MainWindow::setupChannelsUi(int count)
+{
+
+	for (int index = channels.count(); index < count; index++) {
+		TChannelWidgets *widgets = new TChannelWidgets;
+
+		widgets->label   = new QLabel(centralWidget);
+		widgets->label->setText(tr("Channel #%1, %:").arg(channels.count()));
+		widgets->label->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
+
+		widgets->slider  = new QSlider(Qt::Horizontal, centralWidget);
+		widgets->slider->setTickPosition(QSlider::TicksBothSides);
+		widgets->slider->setRange(0, 1000);
+		widgets->slider->setTickInterval(100);
+		widgets->slider->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+		widgets->spinBox = new QDoubleSpinBox(centralWidget);
+		widgets->spinBox->setMaximum(100);
+		widgets->spinBox->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+		widgets->spinBox->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Fixed);
+
+		connect(widgets->spinBox, static_cast<void (QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), this, [this, index] (double value) {
+			channels[index]->slider->setValue(int(value * 10));
+			devise.setChanelValue(index, value);
+			updateSyncPulseValue();
+			drawPlot();
+		});
+
+		connect(widgets->slider, &QSlider::valueChanged, this, [this, index] (int value) {
+			channels[index]->spinBox->setValue(double(value) / 10);
+		});
+
+		// Расположение виджетов
+		gridLayout->addWidget(widgets->label   , 9 + channels.count(), 0, 1, 1);
+		gridLayout->addWidget(widgets->slider  , 9 + channels.count(), 1, 1, 2);
+		gridLayout->addWidget(widgets->spinBox , 9 + channels.count(), 3, 1, 1);
+
+		channels.append(widgets);
+	}
+
+	// Удаляем лишние виджеты при уменьшении количества каналов PPM сигнала
+	while (channels.count() > count) {
+		TChannelWidgets *widgets = channels.last();
+
+		channels.removeLast();
+		gridLayout->removeWidget(widgets->label);
+		gridLayout->removeWidget(widgets->slider);
+		gridLayout->removeWidget(widgets->spinBox);
+
+		delete widgets->label;
+		delete widgets->slider;
+		delete widgets->spinBox;
+	}
+
+	drawPlot();
+}
+
+void MainWindow::retranslateUi()
+{
+	setWindowTitle(tr("Arduino PPM Generator"));
+	labelChannelsCount->setText(tr("Channels count:"));
+	labelPeriod->setText(tr("Period, ms:"));
+	labelPause->setText(tr("Pause, ms:"));
+	labelMinimum->setText(tr("Minimum, ms:"));
+	labelMaximum->setText(tr("Maximum, ms:"));
+	labelPort->setText(tr("Serial port:"));
+	inputUpdatePorts->setText(tr("Update"));
+	labelSpeed->setText(tr("Baud rate, Bd:"));
+	inputConnect->setText(tr("Connect"));
+	labelSyncPulse->setText(tr("Sync period, ms"));
+	inputStartStop->setText(tr("Start"));
+	inputInversion->setText(tr("Inversion"));
+	xAxis->setTitleText(tr("Time, ms"));
 }
 
 void MainWindow::enumeratePorts()
@@ -194,10 +327,7 @@ void MainWindow::enumeratePorts()
 
 		inputPort->addItem(info.portName());
 		inputPort->setItemData(id, QVariant(tooltip), Qt::ToolTipRole);
-		if (info.isBusy()) {
-			inputPort->setItemData(id, QVariant(QBrush(Qt::red)), Qt::ForegroundRole);
-			//ui->inputPort->setItemData(id, QVariant(false), Qt::ItemIsEnabled);
-		}
+		if (info.isBusy()) inputPort->setItemData(id, QVariant(QBrush(Qt::red)), Qt::ForegroundRole);
 		id++;
 	}
 }
@@ -210,57 +340,6 @@ void MainWindow::enumerateBaudRates()
 	}
 }
 
-void MainWindow::setupChannelsUi(int count)
-{
-
-	for (int index = channels.count(); index < count; index++) {
-		TChannelWidgets *widgets = new TChannelWidgets;
-
-		widgets->label   = new QLabel(centralWidget);
-		widgets->slider  = new QDoubleSlider(Qt::Horizontal, centralWidget);
-		widgets->spinBox = new QDoubleSpinBox(centralWidget);
-
-		widgets->slider->setTickPosition(QSlider::TicksBothSides);
-		widgets->slider->setTickInterval(10.0);
-		widgets->slider->setMaximum(100.0);
-
-		widgets->spinBox->setMaximum(100);
-		widgets->spinBox->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
-
-		connect(widgets->spinBox, SIGNAL(valueChanged(double)), &mapper, SLOT(map()));
-		mapper.setMapping(widgets->spinBox, index);
-
-		widgets->label->setText(tr("Channel #%1, %:").arg(channels.count()));
-
-		connect(widgets->slider , SIGNAL(valueChanged(double)), widgets->spinBox, SLOT(setValue(double)));
-		connect(widgets->spinBox, SIGNAL(valueChanged(double)), widgets->slider, SLOT(setValue(double)));
-		connect(widgets->slider , SIGNAL(valueChanged(double)), SLOT(drawPlot()));
-
-		// Расположение виджетов
-		gridLayout->addWidget(widgets->label   , 9 + channels.count(), 0, 1, 1);
-		gridLayout->addWidget(widgets->slider  , 9 + channels.count(), 1, 1, 1);
-		gridLayout->addWidget(widgets->spinBox , 9 + channels.count(), 2, 1, 1);
-
-		channels.append(widgets);
-	}
-
-	// Удаляем лишние виджеты при уменьшении количества каналов PPM сигнала
-	while (channels.count() > count) {
-		TChannelWidgets *widgets = channels.last();
-
-		channels.removeLast();
-		gridLayout->removeWidget(widgets->label);
-		gridLayout->removeWidget(widgets->slider);
-		gridLayout->removeWidget(widgets->spinBox);
-
-		delete widgets->label;
-		delete widgets->slider;
-		delete widgets->spinBox;
-	}
-
-	drawPlot();
-}
-
 void MainWindow::saveSession()
 {
 	QSettings settings;
@@ -268,6 +347,7 @@ void MainWindow::saveSession()
 	settings.setValue("geometry"     , saveGeometry());
 	settings.setValue("state"        , saveState());
 	settings.setValue("count"        , inputChannelsCount->value());
+	settings.setValue("inversion"    , inputInversion->isChecked());
 	settings.setValue("period"       , inputPeriod->value());
 	settings.setValue("pause"        , inputPause->value());
 	settings.setValue("min"          , inputMinimum->value());
@@ -277,7 +357,7 @@ void MainWindow::saveSession()
 
 	QStringList values;
 	foreach (auto channel, channels) {
-		values.append(QString("%1").arg(channel->slider->value()));
+		values.append(QString("%1").arg(channel->spinBox->value()));
 	}
 
 	settings.setValue("values", values.join(";"));
@@ -290,6 +370,7 @@ void MainWindow::restoreSession()
 	restoreGeometry(settings.value("geometry").toByteArray());
 	restoreState(settings.value("state").toByteArray());
 	inputChannelsCount->setValue(settings.value("count", 8).toInt());
+	inputInversion->setChecked(settings.value("inversion", false).toBool());
 	inputPeriod->setValue(settings.value("period", 22.5).toDouble());
 	inputPause->setValue(settings.value("pause", 0.2).toDouble());
 	inputMinimum->setValue(settings.value("min", 0.3).toDouble());
@@ -299,7 +380,7 @@ void MainWindow::restoreSession()
 
 	QStringList values = settings.value("values").toString().split(";");
 	for (int i = 0; i < values.count(); ++i) {
-		channels[i]->slider->setValue(values[i].toDouble());
+		channels[i]->spinBox->setValue(values[i].toDouble());
 	}
 
 	drawPlot();
@@ -313,84 +394,116 @@ void MainWindow::closeEvent(QCloseEvent *event)
 
 void MainWindow::drawPlot()
 {
-	double period = inputPeriod->value();       // Время всей последовательности импульсов, мсек
-	double pause  = inputPause->value();        // Время паузы высокого уровня между импульсами, мсек
-	double min    = inputMinimum->value();      // Минимальное время импульса и пазу канала, мсек
-	double max    = inputMaximum->value();      // Максимальное время импульса и пазу канала, мсек
-	double time   = 0.0;                        // Время, мсек
-	int index     = 0;                          // Номер точки графика
-	int count     = channels.count();           // Количество каналов
-	int dotsCount = count * 4 + 10;             // Количество точек графика
-	QVector<double> x(dotsCount), y(dotsCount); // Координаты точек графика
+	qreal period = (qreal) inputPeriod->value();       // Время всей последовательности импульсов, мсек
+	qreal left   = (qreal) -qCeil(0.03 * period);      // Зазор слева, для большей наглядности
+	qreal right  = (qreal) qCeil(1.03 * period);       // Зазор слева, для большей наглядности
+	qreal pause  = (qreal) inputPause->value();        // Время паузы высокого уровня между импульсами, мсек
+	qreal min    = (qreal) inputMinimum->value();      // Минимальное время импульса и пазу канала, мсек
+	qreal max    = (qreal) inputMaximum->value();      // Максимальное время импульса и пазу канала, мсек
+	int count    = (qreal) channels.count();           // Количество каналов
+	qreal x = 0.0;
+	qreal y1, y2;
 
-	// Координата Y
-	for (int i = 0; i < dotsCount; ++i) {
-		y[i] = (i / 2 % 2) ? 0.0 : 1.0;
-	}
-
-	// Первые 3 точки - завершение предидущего периода PPM сигнала
-	x[index++] = -1.0;
-	x[index++] = time;
-	x[index++] = time;
-
-	// По четыре точки на каждый канал
-	for (int i = 0; i < count; i++) {
-		time += pause;
-		x[index++] = time;
-		x[index++] = time;
-		time += (double) channels[i]->slider->value() * (max - min) / 100 + min - pause;
-		x[index++] = time;
-		x[index++] = time;
-	}
-
-	time += pause;
-	x[index++] = time;
-	x[index++] = time;
-	time = period;
-	x[index++] = time;
-	x[index++] = time;
-	time += pause;
-	x[index++] = time;
-	x[index++] = time;
-	time = qCeil(time + .5);
-	x[index] = time;
-
-	curve->setData(x, y);
-	plot->xAxis->setRange(x[0], x[index]);
-	plot->replot();
-
-	updateSyncPulseValue();
-}
-
-void MainWindow::connectDisconnect()
-{
-	if (port.isOpen()) {
-		port.close();
+	if (inputInversion->isChecked()) {
+		y1 = 0.0, y2 = 1.0;
 	} else {
-		port.setPortName(inputPort->currentText());
-		port.setBaudRate(inputSpeed->currentText().toInt());
-		port.open(QIODevice::ReadWrite);
-		devise.updateFrequency();
+		y1 = 1.0, y2 = 0.0;
 	}
-	retranslateUi();
-}
 
-void MainWindow::onChanelValueChanged(int chanel)
-{
-	devise.setChanelValue(chanel, channels[chanel]->spinBox->value());
+	line->clear();
+	line->append(left, y1);
+	line->append( 0.0, y1);
+	line->append( 0.0, y2);
+
+	for (int i = 0; i < count; i++) {
+		x += pause;
+
+		line->append(x, y2);
+		line->append(x, y1);
+		x += channels[i]->spinBox->value() * (max - min) / 100 + min - pause;
+
+		line->append(x, y1);
+		line->append(x, y2);
+	}
+
+	x += pause;
+	line->append(x, y2);
+	line->append(x, y1);
+
+	line->append(period, y1);
+	line->append(period, y2);
+
+	x = period + pause;
+	line->append(x, y2);
+	line->append(x, y1);
+
+	line->append(right, y1);
+
+	xAxis->setRange(left, right);
+
+	xAxisUpdate();
 	updateSyncPulseValue();
 }
 
 void MainWindow::updateSyncPulseValue()
 {
-	double period = (double) inputPeriod->value();  // Время всей последовательности импульсов, мсек
-	double min    = (double) inputMinimum->value(); // Минимальное время импульса и пазу канала, мсек
-	double max    = (double) inputMaximum->value(); // Максимальное время импульса и пазу канала, мсек
+	double sync    = (double) inputPeriod->value();  // Время всей последовательности импульсов, мсек
+	double min     = (double) inputMinimum->value(); // Минимальное время импульса и пазу канала, мсек
+	double max     = (double) inputMaximum->value(); // Максимальное время импульса и пазу канала, мсек
 
-	foreach (TChannelWidgets *channel, channels) {
-		period -= (double) channel->slider->value() * (max - min) / 100 + min;
+	foreach (auto *channel, channels) {
+		sync -= (double) channel->spinBox->value() * (max - min) / 100 + min;
 	}
 
-	outputSyncPulse->setMaximum(period);
-	outputSyncPulse->setValue(period);
+	outputSyncPulse->setMaximum(sync);
+	outputSyncPulse->setValue(sync);
+	outputSyncPulse->setPalette(gradient(sync, max));
+}
+
+void MainWindow::check()
+{
+	// Время импульса синхронизации при максимальном значении всех сигнал, мсек
+	double max = (double) inputMaximum->value();
+
+	// Максимальное время импульса и пазу канала, мсек
+	double sync = inputPeriod->value() - max * double(channels.count());
+
+	inputPeriod->setPalette(gradient(sync, max));
+	inputMaximum->setPalette(gradient(sync, max));
+}
+
+//
+QPalette MainWindow::gradient(double value, double max)
+{
+	QColor color(Qt::white);
+	QPalette newPalete(palette());
+
+	if      (value <= max * 1.0) color = QColor(255,   0,   0);
+	else if (value <= max * 1.2) color = QColor(255, 119,   0);
+	else if (value <= max * 1.5) color = QColor(255, 208,   0);
+	else if (value <= max * 2.0) color = QColor(255, 255,   0);
+
+	newPalete.setColor(QPalette::Base, color);
+	return newPalete;
+}
+
+void MainWindow::xAxisUpdate()
+{
+	qreal period = (qreal) inputPeriod->value();       // Время всей последовательности импульсов, мсек
+	qreal left   = (qreal) -qCeil(0.03 * period);      // Зазор слева, для большей наглядности
+	qreal right  = (qreal) qCeil(1.03 * period);       // Зазор слева, для большей наглядности
+	qreal range  = right - left;                       // Дапазон значений x на графике
+
+	// TODO: Дробные значения на оси x выглядят некрасиво.
+	// х.з. что можно с этим сделать
+
+	if (chartView->width() > 1000) {
+		xAxis->setTickCount(range + 1);
+	} else if (chartView->width() > 600) {
+		xAxis->setTickCount(range / 2 + 1);
+	} else if (chartView->width() > 300) {
+		xAxis->setTickCount(range / 4 + 1);
+	} else{
+		xAxis->setTickCount(range / 8 + 1);
+	}
 }

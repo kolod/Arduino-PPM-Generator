@@ -1,5 +1,5 @@
 #    Arduino PPM Generator
-#    Copyright (C) 2015  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
+#    Copyright (C) 2015-2016  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -14,20 +14,30 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-QT       += core gui widgets printsupport serialport
-CONFIG   += c++11
-TARGET   = ppm-generator
-TEMPLATE = app
+QT       += charts core gui widgets printsupport serialport serialbus
+TARGET    = ppm-generator
+TEMPLATE  = app
 
 SOURCES += \
 	main.cpp\
 	mainwindow.cpp \
-	qcustomplot.cpp \
-	ppm.cpp \
-	qdoubleslider.cpp
+	ppm.cpp
 
 HEADERS  += \
 	mainwindow.h \
-	qcustomplot.h \
-	ppm.h \
-	qdoubleslider.h
+	ppm.h
+
+# Версия программы
+VERSION  = 1.0
+
+# Добавление информации о файле для win32 приложения
+QMAKE_TARGET_COMPANY     = Alexandr Kolodkin
+QMAKE_TARGET_PRODUCT     = The PPM Generator
+QMAKE_TARGET_DESCRIPTION = The Arduino based Pulse Position Modulation Generator
+QMAKE_TARGET_COPYRIGHT   = Copyright © 2015-2016 Alexandr Kolodkin
+
+# Иконка
+win32: RC_ICONS = app.ico
+
+DISTFILES += \
+	app.ico

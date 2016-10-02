@@ -1,5 +1,5 @@
 ﻿//    Arduino PPM Generator
-//    Copyright (C) 2015  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
+//    Copyright (C) 2015-2016  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU General Public License as published by
@@ -19,15 +19,18 @@
 #include <QStyleFactory>
 #include <QTranslator>
 #include <QLibraryInfo>
+#include <QLoggingCategory>
 
 int main(int argc, char *argv[])
 {
 	QApplication a(argc, argv);
 	MainWindow w;
 
-	a.setApplicationName("PPM Generator");
+	a.setApplicationName("Arduino PPM Generator");
 	a.setOrganizationName("Alexandr Kolodkin");
 	a.setStyle(QStyleFactory::create("Fusion"));
+
+//	QLoggingCategory::setFilterRules(QStringLiteral("qt.modbus* = true"));
 
 	QTranslator qtTranslator;
 	qtTranslator.load("qt_" + QLocale::system().name(), QLibraryInfo::location(QLibraryInfo::TranslationsPath));

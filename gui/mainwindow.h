@@ -1,5 +1,5 @@
 ﻿//    Arduino PPM Generator
-//    Copyright (C) 2015  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
+//    Copyright (C) 2015-2016  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU General Public License as published by
@@ -17,12 +17,15 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+//using namespace QtCharts;
+
 #include <QMainWindow>
 #include <QSettings>
 #include <QString>
 #include <QLabel>
 #include <QSpinBox>
 #include <QDoubleSpinBox>
+#include <QCheckBox>
 #include <QCloseEvent>
 #include <QWidget>
 #include <QGridLayout>
@@ -32,18 +35,23 @@
 #include <QPen>
 #include <QComboBox>
 #include <QPushButton>
-#include <QSignalMapper>
 #include <QSerialPort>
 #include <QSerialPortInfo>
+#include <QtSerialBus>
 #include <QIntValidator>
+#include <QColor>
+#include <QPalette>
+#include <QChartView>
+#include <QLineSeries>
+#include <QDateTimeAxis>
+#include <QValueAxis>
+#include <QChart>
 
-#include "qdoubleslider.h"
-#include "qcustomplot.h"
 #include "ppm.h"
 
 typedef struct {
 	QLabel         *label;
-	QDoubleSlider  *slider;
+	QSlider        *slider;
 	QDoubleSpinBox *spinBox;
 } TChannelWidgets;
 
@@ -53,50 +61,67 @@ class MainWindow : public QMainWindow
 
 public:
 	explicit MainWindow(QWidget *parent = 0);
+	~MainWindow();
+
 	void saveSession();
 	void restoreSession();
 
 private slots:
-	void setupUi();
-	void setupChannelsUi(int count);
-	void retranslateUi();
 	void enumeratePorts();
 	void enumerateBaudRates();
 	void updateSyncPulseValue();
-	void connectDisconnect();
-	void onChanelValueChanged(int chanel);
 	void drawPlot();
+	void setupChannelsUi(int count);
+	void check();
+	void xAxisUpdate();
 
 private:
-	QLabel         *labelPort;
-	QComboBox      *inputPort;
-	QPushButton    *inputUpdatePorts;
-	QLabel         *labelSpeed;
-	QComboBox      *inputSpeed;
-	QPushButton    *inputConnect;
-	QGridLayout    *gridLayout;
+	void setupUi();
+	void retranslateUi();
+	void closeEvent(QCloseEvent *event);
+	QPalette gradient(double value, double max);
+
+	bool isStarted;
+
+	QModbusClient  *mClient;
+	ppm            devise;
+
 	QWidget        *centralWidget;
+	QGridLayout    *gridLayout;
+
+	QLabel         *labelPort;
+	QLabel         *labelSpeed;
 	QLabel         *labelChannelsCount;
-	QSpinBox       *inputChannelsCount;
 	QLabel         *labelPeriod;
-	QDoubleSpinBox *inputPeriod;
 	QLabel         *labelPause;
-	QDoubleSpinBox *inputPause;
 	QLabel         *labelMinimum;
-	QDoubleSpinBox *inputMinimum;
 	QLabel         *labelMaximum;
-	QDoubleSpinBox *inputMaximum;
-	QCustomPlot    *plot;
-	QCPCurve       *curve;
 	QLabel         *labelSyncPulse;
+
+	QPushButton    *inputUpdatePorts;
+	QPushButton    *inputConnect;
+	QPushButton    *inputStartStop;
+
+	QComboBox      *inputPort;
+	QComboBox      *inputSpeed;
+
+	QSpinBox       *inputChannelsCount;
+
+	QDoubleSpinBox *inputPeriod;
+	QDoubleSpinBox *inputPause;
+	QDoubleSpinBox *inputMinimum;
+	QDoubleSpinBox *inputMaximum;
 	QDoubleSpinBox *outputSyncPulse;
 
-	QSerialPort   port;
-	ppm           devise;
-	QSignalMapper mapper;
+	QCheckBox      *inputInversion;
+
 	QVector<TChannelWidgets*> channels;
 
-	void closeEvent(QCloseEvent *event);
+	QtCharts::QChartView *chartView;
+	QtCharts::QLineSeries *line;
+	QtCharts::QValueAxis *xAxis;
+	QtCharts::QValueAxis *yAxis;
+
 };
 
 #endif // MAINWINDOW_H

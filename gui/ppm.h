@@ -57,6 +57,9 @@ public slots:
 
 	double maxPulseLength();
 
+	bool isDeviceConnected()    const {return mClient ? mClient->state() == QModbusDevice::ConnectedState   : false;}
+	bool isDeviceDisconnected() const {return mClient ? mClient->state() == QModbusDevice::UnconnectedState : true;}
+
 private:
 	void read(int address, quint16 size);
 	void write(QString command);
@@ -69,6 +72,7 @@ private:
 signals:
 	void deviceConnected();
 	void deviceDisconnected();
+	void deviceConnectionFailed();
 	void started();
 	void stoped();
 	void updated();

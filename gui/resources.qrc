@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/">
+        <file>firmware.bin</file>
+    </qresource>
+</RCC>

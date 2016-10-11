@@ -21,11 +21,13 @@ TEMPLATE  = app
 SOURCES += \
 	main.cpp\
 	mainwindow.cpp \
-	ppm.cpp
+	ppm.cpp \
+    loader.cpp
 
 HEADERS  += \
 	mainwindow.h \
-	ppm.h
+	ppm.h \
+    loader.h
 
 # Версия программы
 VERSION  = 1.0
@@ -41,3 +43,6 @@ win32: RC_ICONS = app.ico
 
 DISTFILES += \
 	app.ico
+
+RESOURCES += \
+    resources.qrc

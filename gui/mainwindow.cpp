@@ -22,6 +22,7 @@
 MainWindow::MainWindow(QWidget *parent)
 	: QMainWindow(parent)
 	, isStarted(false)
+	, isFirmwareUploadingRequested(false)
 {
 	mClient = new QModbusRtuSerialMaster();
 	mClient->setNumberOfRetries(1);
@@ -30,6 +31,15 @@ MainWindow::MainWindow(QWidget *parent)
 
 	setupUi();
 	retranslateUi();
+
+	connect(&loader, &Loader::uploadFinished, this, [this] {
+		mClient->setConnectionParameter(QModbusDevice::SerialPortNameParameter, inputPort->currentText());
+		mClient->setConnectionParameter(QModbusDevice::SerialParityParameter, QSerialPort::NoParity);
+		mClient->setConnectionParameter(QModbusDevice::SerialBaudRateParameter, inputSpeed->currentText().toInt());
+		mClient->setConnectionParameter(QModbusDevice::SerialDataBitsParameter, QSerialPort::Data8);
+		mClient->setConnectionParameter(QModbusDevice::SerialStopBitsParameter, QSerialPort::OneStop);
+		mClient->connectDevice();
+	});
 
 	connect(inputStartStop, &QPushButton::clicked, this, [this] {
 		if (isStarted) devise.stop(); else devise.start();
@@ -48,6 +58,29 @@ MainWindow::MainWindow(QWidget *parent)
 	connect(&devise, &ppm::stoped, this, [this] {
 		isStarted = false;
 		inputStartStop->setText(tr("Start"));
+	});
+
+	connect(mClient, &QModbusClient::stateChanged, this, [this] (QModbusDevice::State state) {
+		if (isFirmwareUploadingRequested && (state == QModbusClient::UnconnectedState)) {
+			isFirmwareUploadingRequested = false;
+			uploadFirmware();
+		}
+	});
+
+	connect(&devise, &ppm::deviceConnectionFailed, this, [this] {
+		QMessageBox message;
+		message.setText(tr("The device does not respond."));
+		message.setInformativeText(tr("Try to update the firmware?"));
+		message.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+		if (message.exec() == QMessageBox::Yes) {
+			if (mClient->state() != QModbusClient::UnconnectedState) {
+				qDebug() << "connected in main";
+				isFirmwareUploadingRequested = true;
+				mClient->disconnectDevice();
+			} else {
+				uploadFirmware();
+			}
+		}
 	});
 
 	connect(inputConnect, &QPushButton::clicked, this, [this] {
@@ -506,4 +539,15 @@ void MainWindow::xAxisUpdate()
 	} else{
 		xAxis->setTickCount(range / 8 + 1);
 	}
+}
+
+void MainWindow::uploadFirmware()
+{
+	QFile firmware(":/firmware.bin");
+	firmware.open(QIODevice::ReadOnly);
+	QByteArray data = firmware.readAll();
+	firmware.close();
+
+	loader.setPortName(inputPort->currentText());
+	loader.uploadFirmware(data);
 }

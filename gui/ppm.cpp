@@ -16,9 +16,7 @@
 
 #include <stdarg.h>
 #include <math.h>
-
 #include <QDebug>
-
 #include "ppm.h"
 
 ppm::ppm(QObject *parent)
@@ -51,8 +49,6 @@ void ppm::setModbusClient(QModbusClient *client)
 // Передать новые параметры в устройство, если соблюдены все условия
 void ppm::update()
 {
-	qDebug() << "update";
-
 	if (
 		(mClient != nullptr) &&
 		(mClient->state() == QModbusDevice::ConnectedState) &&
@@ -64,13 +60,9 @@ void ppm::update()
 	) {
 		if (mQuant > 0) {
 
-			qDebug() << "good";
-
 			auto request = QModbusDataUnit(QModbusDataUnit::HoldingRegisters, REG_STATE, 5 + mChannel.count());
 			auto sync = quint32(mPeriod * mQuant);
 			auto minSync = quint32(mMaximum * mQuant + 1);
-
-			qDebug() << mQuant << mChannel << mPause;
 
 			int index = 5;
 			for (int i = 0; i < mChannel.count(); i++) {
@@ -89,8 +81,6 @@ void ppm::update()
 			request.setValue(2, uint16_t(mPause * mQuant));
 			request.setValue(3, quint16(sync & 0x0000FFFF));
 			request.setValue(4, quint16(sync >> 16 & 0x0000FFFF));
-
-			qDebug() << request.values();
 
 			auto *reply = mClient->sendWriteRequest(request, mAddress);
 			if (reply) {
@@ -137,8 +127,6 @@ void ppm::setChanelValue(int chanel, double value)
 
 void ppm::readQuant()
 {
-	qDebug() << "readQuant";
-
 	auto request = QModbusDataUnit(QModbusDataUnit::HoldingRegisters, REG_QUANT, 1);
 	auto *reply = mClient->sendReadRequest(request, mAddress);
 	if (reply) {
@@ -146,16 +134,19 @@ void ppm::readQuant()
 			reply->deleteLater();
 		} else {
 			connect(reply, &QModbusReply::finished, this, [this, reply] {
-				qDebug() << "onReadQuant" << reply->error() << reply->errorString();
-
 				if (reply->error() == QModbusDevice::NoError) {
 					auto result = reply->result();
 					if (result.valueCount() > 0) {
-						mQuant = result.value(0) * 1000;
+						auto quant = result.value(0);
+						if (quant == 0) emit deviceConnectionFailed();
+						mQuant = quant * 1000;
 						emit maxPulseLengthChanged(maxPulseLength());
-						qDebug() << mQuant;
 						update();
+					} else {
+						emit deviceConnectionFailed();
 					}
+				} else {
+					emit deviceConnectionFailed();
 				}
 			});
 		}

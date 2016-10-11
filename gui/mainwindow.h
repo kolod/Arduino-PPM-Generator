@@ -46,8 +46,11 @@
 #include <QDateTimeAxis>
 #include <QValueAxis>
 #include <QChart>
+#include <QMessageBox>
+#include <QFile>
 
 #include "ppm.h"
+#include "loader.h"
 
 typedef struct {
 	QLabel         *label;
@@ -74,6 +77,7 @@ private slots:
 	void setupChannelsUi(int count);
 	void check();
 	void xAxisUpdate();
+	void uploadFirmware();
 
 private:
 	void setupUi();
@@ -82,9 +86,11 @@ private:
 	QPalette gradient(double value, double max);
 
 	bool isStarted;
+	bool isFirmwareUploadingRequested;
 
 	QModbusClient  *mClient;
 	ppm            devise;
+	Loader         loader;
 
 	QWidget        *centralWidget;
 	QGridLayout    *gridLayout;

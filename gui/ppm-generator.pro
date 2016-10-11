@@ -22,12 +22,15 @@ SOURCES += \
 	main.cpp\
 	mainwindow.cpp \
 	ppm.cpp \
-    loader.cpp
+	loader.cpp
 
 HEADERS  += \
 	mainwindow.h \
 	ppm.h \
-    loader.h
+	loader.h
+
+TRANSLATIONS = \
+	ppm_ru.ts
 
 # Версия программы
 VERSION  = 1.0
@@ -45,4 +48,4 @@ DISTFILES += \
 	app.ico
 
 RESOURCES += \
-    resources.qrc
+	resources.qrc

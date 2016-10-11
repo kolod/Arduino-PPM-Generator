@@ -108,7 +108,7 @@ MainWindow::MainWindow(QWidget *parent)
 
 	connect(&devise, &ppm::maxPulseLengthChanged, inputMaximum, &QDoubleSpinBox::setMaximum);
 
-	connect(chartView->chart(), &QtCharts::QChart::widthChanged, this, &xAxisUpdate);
+	connect(chartView->chart(), &QtCharts::QChart::widthChanged, this, &MainWindow::xAxisUpdate);
 
 	connect(inputChannelsCount, SIGNAL(valueChanged(int)),    &devise, SLOT(setChannelsCount(int)));
 	connect(inputPeriod,        SIGNAL(valueChanged(double)), &devise, SLOT(setPeriod(double)));
@@ -329,7 +329,7 @@ void MainWindow::retranslateUi()
 	inputUpdatePorts->setText(tr("Update"));
 	labelSpeed->setText(tr("Baud rate, Bd:"));
 	inputConnect->setText(tr("Connect"));
-	labelSyncPulse->setText(tr("Sync period, ms"));
+	labelSyncPulse->setText(tr("Sync period, ms:"));
 	inputStartStop->setText(tr("Start"));
 	inputInversion->setText(tr("Inversion"));
 	xAxis->setTitleText(tr("Time, ms"));

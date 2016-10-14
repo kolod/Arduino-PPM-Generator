@@ -29,7 +29,6 @@ const quint8 leaveProg[]     = {STK_LEAVE_PROGMODE, CRC_EOP};
 
 Loader::Loader(QObject *parent) : QObject(parent)
 {
-	mTimer.setSingleShot(true);
 	connect(&mPort, SIGNAL(readyRead()), this, SLOT(worker()));
 }
 
@@ -64,79 +63,90 @@ void Loader::worker()
 	if (mExpectedLength) {
 		mInput.append(mPort.readAll());
 		if (mInput.count() < mExpectedLength) return;
-		if (!mInput.startsWith(STK_INSYNC) || !mInput.endsWith(STK_OK)) goto cleanup;
+		if (!mInput.startsWith(STK_INSYNC) || !mInput.endsWith(STK_OK)) clear();
 	}
 
-	qDebug() << (int) mState << mInput.count();
+//	qDebug() << (int) mState << mInput.count();
 
 	switch (mState) {
 	case LoaderState::None:
 		break;
 
 	case LoaderState::Reset:
+		emit stateChanged(tr("Reseting the Arduino"));
 		mState = LoaderState::Sync;
 		mPort.setDataTerminalReady(true);
 		mPort.setRequestToSend(true);
-		mTimer.singleShot(100, this, SLOT(worker()));
+		QTimer::singleShot(100, this, SLOT(worker()));
 		break;
 
 	case LoaderState::Sync:
+		emit stateChanged(tr("Retriving the bootloader parameters"));
 		mInput.clear();
 		mState = LoaderState::GetHardwareVersion;
 		mExpectedLength = 2;
 		mPort.setDataTerminalReady(false);
 		mPort.setRequestToSend(false);
 		mPort.write((char*) sync, sizeof(sync));
+		QTimer::singleShot(1000, this, SLOT(clear()));
 		break;
 
 	case LoaderState::GetHardwareVersion:
-		if (!mInput.startsWith(STK_INSYNC) || !mInput.endsWith(STK_OK)) goto cleanup;
+		if (!mInput.startsWith(STK_INSYNC) || !mInput.endsWith(STK_OK)) clear();
 
 		mInput.clear();
 		mExpectedLength = 3;
 		mState = LoaderState::GetSoftwareVersionMajor;
 		mPort.write((char*) hardware, sizeof(hardware));
+		QTimer::singleShot(100, this, SLOT(clear()));
 		break;
 
 	case LoaderState::GetSoftwareVersionMajor:
-		if (!mInput.startsWith(STK_INSYNC) || !mInput.endsWith(STK_OK)) goto cleanup;
+		if (!mInput.startsWith(STK_INSYNC) || !mInput.endsWith(STK_OK)) clear();
 
 		mInput.clear();
 		mState = LoaderState::GetSoftwareVersionMinor;
 		mPort.write((char*) softwareMajor, sizeof(softwareMajor));
+		QTimer::singleShot(100, this, SLOT(clear()));
 		break;
 
 	case LoaderState::GetSoftwareVersionMinor:
-		if (!mInput.startsWith(STK_INSYNC) || !mInput.endsWith(STK_OK)) goto cleanup;
+		if (!mInput.startsWith(STK_INSYNC) || !mInput.endsWith(STK_OK)) clear();
 
 		mInput.clear();
 		mState = LoaderState::EnterProgramming;
 		mPort.write((char*) softwareMinor, sizeof(softwareMinor));
+		QTimer::singleShot(100, this, SLOT(clear()));
 		break;
 
 	case LoaderState::EnterProgramming:
-		if (!mInput.startsWith(STK_INSYNC) || !mInput.endsWith(STK_OK)) goto cleanup;
+		if (!mInput.startsWith(STK_INSYNC) || !mInput.endsWith(STK_OK)) clear();
 
 		mInput.clear();
 		mExpectedLength = 2;
 		mState = LoaderState::GetDeviceSignature;
 		mPort.write((char*) enterProg, sizeof(enterProg));
+		QTimer::singleShot(100, this, SLOT(clear()));
 		break;
 
 	case LoaderState::GetDeviceSignature:
-		if (!mInput.startsWith(STK_INSYNC) || !mInput.endsWith(STK_OK)) goto cleanup;
+		if (!mInput.startsWith(STK_INSYNC) || !mInput.endsWith(STK_OK)) clear();
 
 		mInput.clear();
 		mExpectedLength = 5;
 		mState = LoaderState::BeginLoop;
 		mPort.write((char*) getSignature, sizeof(getSignature));
+		QTimer::singleShot(100, this, SLOT(clear()));
 		break;
 
 	case LoaderState::BeginLoop:
 		if (mAction == LoaderAction::Upload) {
-			if (!mInput.startsWith(STK_INSYNC) || !mInput.endsWith(STK_OK)) goto cleanup;
+			emit stateChanged(tr("Uploading firmware"));
+			if (!mInput.startsWith(STK_INSYNC) || !mInput.endsWith(STK_OK)) clear();
 			mPageSize = getPageSize((unsigned char) mInput[2], (unsigned char) mInput[3]);
-			if (mPageSize == 0) goto cleanup;
+			if (mPageSize == 0) clear();
+		} else {
+			emit stateChanged(tr("Validating firmware"));
 		}
 
 		mAddress = 0;
@@ -161,10 +171,11 @@ void Loader::worker()
 		mOutput.append((char) (mAddress >> 9 & 0X00FF)); // high
 		mOutput.append(CRC_EOP);
 		mPort.write(mOutput);
+		QTimer::singleShot(100, this, SLOT(clear()));
 		break;
 
 	case LoaderState::WritePage:
-		if (!mInput.startsWith(STK_INSYNC) || !mInput.endsWith(STK_OK)) goto cleanup;
+		if (!mInput.startsWith(STK_INSYNC) || !mInput.endsWith(STK_OK)) clear();
 
 		mState = LoaderState::EndLoop;
 		mExpectedLength = 2;
@@ -182,10 +193,11 @@ void Loader::worker()
 
 		mOutput.append(CRC_EOP);
 		mPort.write(mOutput);
+		QTimer::singleShot(500, this, SLOT(clear()));
 		break;
 
 	case LoaderState::ReadPage:
-		if (!mInput.startsWith(STK_INSYNC) || !mInput.endsWith(STK_OK)) goto cleanup;
+		if (!mInput.startsWith(STK_INSYNC) || !mInput.endsWith(STK_OK)) clear();
 
 		mState = LoaderState::EndLoop;
 		mExpectedLength = mPageSize + 2;
@@ -200,17 +212,18 @@ void Loader::worker()
 		mOutput.append('F');
 		mOutput.append(CRC_EOP);
 		mPort.write(mOutput);
+		QTimer::singleShot(500, this, SLOT(clear()));
 		break;
 
 	case LoaderState::EndLoop:
-		if (!mInput.startsWith(STK_INSYNC) || !mInput.endsWith(STK_OK)) goto cleanup;
+		if (!mInput.startsWith(STK_INSYNC) || !mInput.endsWith(STK_OK)) clear();
 
 		if (mAction == LoaderAction::Validate) {
 			for (int j = 1, i = mAddress; i < mAddress + mPageSize; i++, j++) {
 				if (i < mFirmware.count()) {
-					if (mInput[j] != mFirmware[i]) goto cleanup;
+					if (mInput[j] != mFirmware[i]) clear();
 				} else {
-					if (mInput[j] != (char) 0xFF) goto cleanup;
+					if (mInput[j] != (char) 0xFF) clear();
 				}
 			}
 		}
@@ -238,24 +251,28 @@ void Loader::worker()
 		mExpectedLength = 2;
 		mState = LoaderState::Wait;
 		mPort.write((char*) leaveProg, sizeof(leaveProg));
+		QTimer::singleShot(100, this, SLOT(clear()));
 		break;
 
 	case LoaderState::Wait:
-		if (!mInput.startsWith(STK_INSYNC) || !mInput.endsWith(STK_OK)) goto cleanup;
+		if (!mInput.startsWith(STK_INSYNC) || !mInput.endsWith(STK_OK)) clear();
 
+		emit stateChanged(tr("Wait device ready"));
 		mState = LoaderState::EmitUploadFinished;
 		mPort.close();
-		mTimer.singleShot(2000, this, SLOT(worker()));
+		QTimer::singleShot(2000, this, SLOT(worker()));
 		break;
 
 	case LoaderState::EmitUploadFinished:
-		emit uploadFinished();
-		goto cleanup;
+		clear(true);
 	}
+}
 
-	return;
+void Loader::clear(bool result)
+{
+	emit uploadFinished(result);
+	if (mExpectedLength > 0) emit stateChanged(tr("Error: Timeout"));
 
-cleanup:
 	mInput.clear();
 	mOutput.clear();
 	mFirmware.clear();

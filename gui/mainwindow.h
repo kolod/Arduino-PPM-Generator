@@ -48,6 +48,7 @@
 #include <QChart>
 #include <QMessageBox>
 #include <QFile>
+#include <QStatusBar>
 
 #include "ppm.h"
 #include "loader.h"

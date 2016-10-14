@@ -1,6 +1,13 @@
 <RCC>
     <qresource prefix="/">
         <file>firmware.bin</file>
+    </qresource>
+    <qresource prefix="/icons">
+        <file>connect.svg</file>
+        <file>disconnect.svg</file>
+        <file>update.svg</file>
+    </qresource>
+    <qresource prefix="/translations">
         <file>ppm_ru.qm</file>
     </qresource>
 </RCC>

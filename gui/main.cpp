@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
 	a.installTranslator(&qtTranslator);
 
 	QTranslator myTranslator;
-	myTranslator.load(":/ppm_ru.qm");
+	myTranslator.load(":/translations/ppm_ru.qm");
 	a.installTranslator(&myTranslator);
 
 	MainWindow w;

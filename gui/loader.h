@@ -103,12 +103,16 @@ public:
 	void uploadFirmware(QByteArray data);
 	void validateFirmware(QByteArray data);
 
+
+
 signals:
 	void resetFinished();
-	void uploadFinished();
+	void uploadFinished(bool result);
+	void stateChanged(QString description);
 
 private slots:
 	void worker();
+	void clear(bool result = false);
 
 private:
 	QByteArray mFirmware;
@@ -116,7 +120,6 @@ private:
 	QByteArray mOutput;
 
 	QSerialPort mPort;
-	QTimer mTimer;
 
 	LoaderState mState;
 	LoaderAction mAction;
@@ -127,6 +130,8 @@ private:
 	quint16 getPageSize(unsigned char sig2, unsigned char sig3) const;
 
 	bool openPort();
+
+	QString stateDescription(LoaderState state);
 };
 
 #endif // LOADER_H

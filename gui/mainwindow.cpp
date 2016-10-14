@@ -32,13 +32,23 @@ MainWindow::MainWindow(QWidget *parent)
 	setupUi();
 	retranslateUi();
 
-	connect(&loader, &Loader::uploadFinished, this, [this] {
-		mClient->setConnectionParameter(QModbusDevice::SerialPortNameParameter, inputPort->currentText());
-		mClient->setConnectionParameter(QModbusDevice::SerialParityParameter, QSerialPort::NoParity);
-		mClient->setConnectionParameter(QModbusDevice::SerialBaudRateParameter, inputSpeed->currentText().toInt());
-		mClient->setConnectionParameter(QModbusDevice::SerialDataBitsParameter, QSerialPort::Data8);
-		mClient->setConnectionParameter(QModbusDevice::SerialStopBitsParameter, QSerialPort::OneStop);
-		mClient->connectDevice();
+	connect(&loader, SIGNAL(stateChanged(QString)), statusBar(), SLOT(showMessage(QString)));
+
+	connect(&loader, &Loader::uploadFinished, this, [this] (bool result) {
+		if (result) {
+			mClient->setConnectionParameter(QModbusDevice::SerialPortNameParameter, inputPort->currentText());
+			mClient->setConnectionParameter(QModbusDevice::SerialParityParameter, QSerialPort::NoParity);
+			mClient->setConnectionParameter(QModbusDevice::SerialBaudRateParameter, inputSpeed->currentText().toInt());
+			mClient->setConnectionParameter(QModbusDevice::SerialDataBitsParameter, QSerialPort::Data8);
+			mClient->setConnectionParameter(QModbusDevice::SerialStopBitsParameter, QSerialPort::OneStop);
+			mClient->connectDevice();
+		} else {
+			QMessageBox message;
+			message.setText(tr("Firmware uploading failed."));
+			message.setInformativeText(tr("Please check if the arduino connecterd and right serial port selected."));
+			message.setStandardButtons(QMessageBox::Ok);
+			message.exec();
+		}
 	});
 
 	connect(inputStartStop, &QPushButton::clicked, this, [this] {
@@ -74,7 +84,6 @@ MainWindow::MainWindow(QWidget *parent)
 		message.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
 		if (message.exec() == QMessageBox::Yes) {
 			if (mClient->state() != QModbusClient::UnconnectedState) {
-				qDebug() << "connected in main";
 				isFirmwareUploadingRequested = true;
 				mClient->disconnectDevice();
 			} else {
@@ -98,17 +107,19 @@ MainWindow::MainWindow(QWidget *parent)
 
 	connect(&devise, &ppm::deviceConnected, this, [this] {
 		inputConnect->setText(tr("Disconnect"));
+		inputConnect->setIcon(QIcon(":/icons/disconnect.svg"));
 		inputStartStop->setEnabled(true);
 	});
 
 	connect(&devise, &ppm::deviceDisconnected, this, [this] {
 		inputConnect->setText(tr("Connect"));
+		inputConnect->setIcon(QIcon(":/icons/connect.svg"));
 		inputStartStop->setDisabled(true);
 	});
 
 	connect(&devise, &ppm::maxPulseLengthChanged, inputMaximum, &QDoubleSpinBox::setMaximum);
 
-	connect(chartView->chart(), &QtCharts::QChart::widthChanged, this, &MainWindow::xAxisUpdate);
+	connect(chartView->chart(), SIGNAL(widthChanged()), this, SLOT(xAxisUpdate()));
 
 	connect(inputChannelsCount, SIGNAL(valueChanged(int)),    &devise, SLOT(setChannelsCount(int)));
 	connect(inputPeriod,        SIGNAL(valueChanged(double)), &devise, SLOT(setPeriod(double)));
@@ -144,11 +155,14 @@ void MainWindow::setupUi()
 	gridLayout         = new QGridLayout(centralWidget);
 	gridLayout->setMargin(5);
 
+	statusBar()->show();
+
 	// Порт
 	labelPort          = new QLabel(centralWidget);
 	inputPort          = new QComboBox(centralWidget);
 	inputUpdatePorts   = new QPushButton(centralWidget);
 	inputUpdatePorts->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
+	inputUpdatePorts->setIcon(QIcon(":/icons/update.svg"));
 	enumeratePorts();
 
 	// Скорость
@@ -156,6 +170,7 @@ void MainWindow::setupUi()
 	inputSpeed         = new QComboBox(centralWidget);
 	inputConnect       = new QPushButton(centralWidget);
 	inputConnect->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
+	inputConnect->setIcon(QIcon(":/icons/connect.svg"));
 	inputSpeed->setEditable(true);
 	inputSpeed->setValidator(new QIntValidator(1, 24000000, this));
 	enumerateBaudRates();
@@ -221,7 +236,6 @@ void MainWindow::setupUi()
 	chartView->chart()->legend()->hide();
 	chartView->chart()->setAxisX(xAxis, line);
 	chartView->chart()->setAxisY(yAxis, line);
-	chartView->setContentsMargins(-3,-3,-3,-3);
 
 	// Вывод длительности синхроимпульса (мксек)
 	labelSyncPulse     = new QLabel(centralWidget);

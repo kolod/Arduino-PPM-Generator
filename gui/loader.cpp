@@ -271,7 +271,7 @@ void Loader::worker()
 void Loader::clear(bool result)
 {
 	emit uploadFinished(result);
-	if (mExpectedLength > 0) emit stateChanged(tr("Error: Timeout"));
+	if ((result == false) && (mExpectedLength > 0)) emit stateChanged(tr("Error: Timeout"));
 
 	mInput.clear();
 	mOutput.clear();

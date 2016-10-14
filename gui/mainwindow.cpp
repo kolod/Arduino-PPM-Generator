@@ -43,7 +43,8 @@ MainWindow::MainWindow(QWidget *parent)
 			mClient->setConnectionParameter(QModbusDevice::SerialStopBitsParameter, QSerialPort::OneStop);
 			mClient->connectDevice();
 		} else {
-			QMessageBox message;
+			QMessageBox message(this);
+			message.setIconPixmap(QPixmap(":/icons/error.svg"));
 			message.setText(tr("Firmware uploading failed."));
 			message.setInformativeText(tr("Please check if the arduino connecterd and right serial port selected."));
 			message.setStandardButtons(QMessageBox::Ok);
@@ -78,7 +79,8 @@ MainWindow::MainWindow(QWidget *parent)
 	});
 
 	connect(&devise, &ppm::deviceConnectionFailed, this, [this] {
-		QMessageBox message;
+		QMessageBox message(this);
+		message.setIconPixmap(QPixmap(":/icons/error.svg"));
 		message.setText(tr("The device does not respond."));
 		message.setInformativeText(tr("Try to update the firmware?"));
 		message.setStandardButtons(QMessageBox::Yes | QMessageBox::No);

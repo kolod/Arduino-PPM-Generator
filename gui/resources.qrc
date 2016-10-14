@@ -6,6 +6,7 @@
         <file>connect.svg</file>
         <file>disconnect.svg</file>
         <file>update.svg</file>
+        <file>error.svg</file>
     </qresource>
     <qresource prefix="/translations">
         <file>ppm_ru.qm</file>

@@ -39,7 +39,7 @@
     <message>
         <location filename="mainwindow.cpp" line="47"/>
         <source>Firmware uploading failed.</source>
-        <translation>Загрузка прошивки не удалась</translation>
+        <translation>Загрузка прошивки не удалась.</translation>
     </message>
     <message>
         <location filename="mainwindow.cpp" line="48"/>
@@ -49,13 +49,13 @@
     <message>
         <location filename="mainwindow.cpp" line="65"/>
         <source>Stop</source>
-        <translation>Запустить</translation>
+        <translation>Остановить</translation>
     </message>
     <message>
         <location filename="mainwindow.cpp" line="70"/>
         <location filename="mainwindow.cpp" line="347"/>
         <source>Start</source>
-        <translation>Остановить</translation>
+        <translation>Запустить</translation>
     </message>
     <message>
         <location filename="mainwindow.cpp" line="82"/>

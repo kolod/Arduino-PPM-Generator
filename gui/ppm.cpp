@@ -38,9 +38,10 @@ void ppm::setModbusClient(QModbusClient *client)
 	mClient = client;
 	connect(mClient, &QModbusClient::stateChanged, this, [this] {
 		if (mClient->state() == QModbusDevice::ConnectedState) {
-			emit deviceConnected();
 			update();
+			emit deviceConnected();
 		} else {
+			mQuant = 0;
 			emit deviceDisconnected();
 		}
 	});

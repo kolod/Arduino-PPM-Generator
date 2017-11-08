@@ -1,5 +1,5 @@
 ﻿//    Arduino PPM Generator
-//    Copyright (C) 2015-2016  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
+//    Copyright (C) 2015-2017  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU General Public License as published by
@@ -162,8 +162,9 @@ void MainWindow::setupUi()
 	// Порт
 	labelPort          = new QLabel(centralWidget);
 	inputPort          = new QComboBox(centralWidget);
+	inputPort->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 	inputUpdatePorts   = new QPushButton(centralWidget);
-	inputUpdatePorts->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
+	inputUpdatePorts->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 	inputUpdatePorts->setIcon(QIcon(":/icons/update.svg"));
 	enumeratePorts();
 
@@ -171,7 +172,7 @@ void MainWindow::setupUi()
 	labelSpeed         = new QLabel(centralWidget);
 	inputSpeed         = new QComboBox(centralWidget);
 	inputConnect       = new QPushButton(centralWidget);
-	inputConnect->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
+	inputConnect->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 	inputConnect->setIcon(QIcon(":/icons/connect.svg"));
 	inputSpeed->setEditable(true);
 	inputSpeed->setValidator(new QIntValidator(1, 24000000, this));
@@ -179,7 +180,7 @@ void MainWindow::setupUi()
 
 	// Кнопка включения / выключения
 	inputStartStop     = new QPushButton(centralWidget);
-	inputStartStop->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+	inputStartStop->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
 	inputStartStop->setDisabled(true);
 
 	// Инверсия PPM сигнала
@@ -273,6 +274,9 @@ void MainWindow::setupUi()
 	gridLayout->addWidget(inputStartStop     , 0, 3, 1, 1);
 	gridLayout->addWidget(inputInversion     , 1, 3, 1, 1);
 
+//	gridLayout->setColumnMinimumWidth(2, 150);
+//	gridLayout->setColumnMinimumWidth(3, 150);
+
 	setCentralWidget(centralWidget);
 }
 
@@ -284,7 +288,7 @@ void MainWindow::setupChannelsUi(int count)
 
 		widgets->label   = new QLabel(centralWidget);
 		widgets->label->setText(tr("Channel #%1, %:").arg(channels.count()));
-		widgets->label->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
+		widgets->label->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
 		widgets->slider  = new QSlider(Qt::Horizontal, centralWidget);
 		widgets->slider->setTickPosition(QSlider::TicksBothSides);
@@ -295,7 +299,11 @@ void MainWindow::setupChannelsUi(int count)
 		widgets->spinBox = new QDoubleSpinBox(centralWidget);
 		widgets->spinBox->setMaximum(100);
 		widgets->spinBox->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
-		widgets->spinBox->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Fixed);
+		widgets->spinBox->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+
+		widgets->bind = new QPushButton(centralWidget);
+		widgets->bind->setText(tr("Bind"));
+		widgets->bind->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
 		connect(widgets->spinBox, static_cast<void (QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), this, [this, index] (double value) {
 			channels[index]->slider->setValue(int(value * 10));
@@ -310,8 +318,9 @@ void MainWindow::setupChannelsUi(int count)
 
 		// Расположение виджетов
 		gridLayout->addWidget(widgets->label   , 9 + channels.count(), 0, 1, 1);
-		gridLayout->addWidget(widgets->slider  , 9 + channels.count(), 1, 1, 2);
-		gridLayout->addWidget(widgets->spinBox , 9 + channels.count(), 3, 1, 1);
+		gridLayout->addWidget(widgets->slider  , 9 + channels.count(), 1, 1, 1);
+		gridLayout->addWidget(widgets->spinBox , 9 + channels.count(), 2, 1, 1);
+		gridLayout->addWidget(widgets->bind    , 9 + channels.count(), 3, 1, 1);
 
 		channels.append(widgets);
 	}
@@ -324,10 +333,12 @@ void MainWindow::setupChannelsUi(int count)
 		gridLayout->removeWidget(widgets->label);
 		gridLayout->removeWidget(widgets->slider);
 		gridLayout->removeWidget(widgets->spinBox);
+		gridLayout->removeWidget(widgets->bind);
 
 		delete widgets->label;
 		delete widgets->slider;
 		delete widgets->spinBox;
+		delete widgets->bind;
 	}
 
 	drawPlot();

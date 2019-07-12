@@ -1,5 +1,5 @@
 ﻿//    Arduino PPM Generator
-//    Copyright (C) 2015-2017  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
+//    Copyright (C) 2015-2019  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU General Public License as published by
@@ -158,6 +158,6 @@ void ppm::readQuant()
 
 double ppm::maxPulseLength()
 {
-	if (mQuant > 0.0) return floor((double) 0xFFFF / mQuant);
+	if (mQuant > 0.0) return floor(static_cast<double>(0xFFFF) / mQuant);
 	return 100000.0;
 }

@@ -1,5 +1,5 @@
 //    Arduino PPM Generator
-//    Copyright (C) 2015-2017  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
+//    Copyright (C) 2015-2019  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU General Public License as published by
@@ -87,7 +87,7 @@ void Loader::worker()
 		mExpectedLength = 2;
 		mPort.setDataTerminalReady(false);
 		mPort.setRequestToSend(false);
-		mPort.write((char*) sync, sizeof(sync));
+		mPort.write(reinterpret_cast<const char*>(sync), sizeof(sync));
 		QTimer::singleShot(1000, this, SLOT(clear()));
 		break;
 
@@ -97,7 +97,7 @@ void Loader::worker()
 		mInput.clear();
 		mExpectedLength = 3;
 		mState = LoaderState::GetSoftwareVersionMajor;
-		mPort.write((char*) hardware, sizeof(hardware));
+		mPort.write(reinterpret_cast<const char*>(hardware), sizeof(hardware));
 		QTimer::singleShot(100, this, SLOT(clear()));
 		break;
 
@@ -106,7 +106,7 @@ void Loader::worker()
 
 		mInput.clear();
 		mState = LoaderState::GetSoftwareVersionMinor;
-		mPort.write((char*) softwareMajor, sizeof(softwareMajor));
+		mPort.write(reinterpret_cast<const char*>(softwareMajor), sizeof(softwareMajor));
 		QTimer::singleShot(100, this, SLOT(clear()));
 		break;
 
@@ -115,7 +115,7 @@ void Loader::worker()
 
 		mInput.clear();
 		mState = LoaderState::EnterProgramming;
-		mPort.write((char*) softwareMinor, sizeof(softwareMinor));
+		mPort.write(reinterpret_cast<const char*>(softwareMinor), sizeof(softwareMinor));
 		QTimer::singleShot(100, this, SLOT(clear()));
 		break;
 
@@ -125,7 +125,7 @@ void Loader::worker()
 		mInput.clear();
 		mExpectedLength = 2;
 		mState = LoaderState::GetDeviceSignature;
-		mPort.write((char*) enterProg, sizeof(enterProg));
+		mPort.write(reinterpret_cast<const char*>(enterProg), sizeof(enterProg));
 		QTimer::singleShot(100, this, SLOT(clear()));
 		break;
 
@@ -135,7 +135,7 @@ void Loader::worker()
 		mInput.clear();
 		mExpectedLength = 5;
 		mState = LoaderState::BeginLoop;
-		mPort.write((char*) getSignature, sizeof(getSignature));
+		mPort.write(reinterpret_cast<const char*>(getSignature), sizeof(getSignature));
 		QTimer::singleShot(100, this, SLOT(clear()));
 		break;
 
@@ -143,7 +143,7 @@ void Loader::worker()
 		if (mAction == LoaderAction::Upload) {
 			emit stateChanged(tr("Uploading firmware"));
 			if (!mInput.startsWith(STK_INSYNC) || !mInput.endsWith(STK_OK)) clear();
-			mPageSize = getPageSize((unsigned char) mInput[2], (unsigned char) mInput[3]);
+			mPageSize = getPageSize(static_cast<quint8>(mInput[2]), static_cast<quint8>(mInput[3]));
 			if (mPageSize == 0) clear();
 		} else {
 			emit stateChanged(tr("Validating firmware"));
@@ -167,8 +167,8 @@ void Loader::worker()
 		mOutput.clear();
 		mExpectedLength = 2;
 		mOutput.append(STK_LOAD_ADDRESS);
-		mOutput.append((char) (mAddress >> 1 & 0X00FF)); // low
-		mOutput.append((char) (mAddress >> 9 & 0X00FF)); // high
+		mOutput.append(static_cast<char>((mAddress >> 1) & 0xFF)); // low
+		mOutput.append(static_cast<char>((mAddress >> 9) & 0xFF)); // high
 		mOutput.append(CRC_EOP);
 		mPort.write(mOutput);
 		QTimer::singleShot(100, this, SLOT(clear()));
@@ -183,12 +183,12 @@ void Loader::worker()
 		mInput.clear();
 		mOutput.clear();
 		mOutput.append(STK_PROG_PAGE);
-		mOutput.append((char) (mPageSize >> 8 & 0xFF)); // high
-		mOutput.append((char) (mPageSize & 0xFF));      // low
+		mOutput.append(static_cast<char>((mPageSize >> 8) & 0xFF)); // high
+		mOutput.append(static_cast<char>(mPageSize & 0xFF));        // low
 		mOutput.append('F');
 
 		for (int i = mAddress; i < mAddress + mPageSize; i++) {
-			mOutput.append(i >= mFirmware.count() ? (char) 0xFF : mFirmware[i]);
+			mOutput.append(i >= mFirmware.count() ? '\xFF' : mFirmware[i]);
 		}
 
 		mOutput.append(CRC_EOP);
@@ -207,8 +207,8 @@ void Loader::worker()
 		mInput.clear();
 		mOutput.clear();
 		mOutput.append(STK_READ_PAGE);
-		mOutput.append((char) (mPageSize >> 8 & 0xFF)); // high
-		mOutput.append((char) (mPageSize & 0xFF));      // low
+		mOutput.append(static_cast<char>((mPageSize >> 8) & 0xFF)); // high
+		mOutput.append(static_cast<char>(mPageSize & 0xFF));        // low
 		mOutput.append('F');
 		mOutput.append(CRC_EOP);
 		mPort.write(mOutput);
@@ -223,7 +223,7 @@ void Loader::worker()
 				if (i < mFirmware.count()) {
 					if (mInput[j] != mFirmware[i]) clear();
 				} else {
-					if (mInput[j] != (char) 0xFF) clear();
+					if (mInput[j] != '\xFF') clear();
 				}
 			}
 		}
@@ -250,7 +250,7 @@ void Loader::worker()
 	case LoaderState::LeaveProgramming:
 		mExpectedLength = 2;
 		mState = LoaderState::Wait;
-		mPort.write((char*) leaveProg, sizeof(leaveProg));
+		mPort.write(reinterpret_cast<const char*>(leaveProg), sizeof(leaveProg));
 		QTimer::singleShot(100, this, SLOT(clear()));
 		break;
 

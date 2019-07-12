@@ -454,20 +454,20 @@ void MainWindow::closeEvent(QCloseEvent *event)
 
 void MainWindow::drawPlot()
 {
-	qreal period = (qreal) inputPeriod->value();       // Время всей последовательности импульсов, мсек
-	qreal left   = (qreal) -qCeil(0.03 * period);      // Зазор слева, для большей наглядности
-	qreal right  = (qreal) qCeil(1.03 * period);       // Зазор слева, для большей наглядности
-	qreal pause  = (qreal) inputPause->value();        // Время паузы высокого уровня между импульсами, мсек
-	qreal min    = (qreal) inputMinimum->value();      // Минимальное время импульса и пазу канала, мсек
-	qreal max    = (qreal) inputMaximum->value();      // Максимальное время импульса и пазу канала, мсек
-	int count    = (qreal) channels.count();           // Количество каналов
+    qreal period = static_cast<qreal>(inputPeriod->value());       // Время всей последовательности импульсов, мсек
+    qreal left   = static_cast<qreal>(-qCeil(0.03 * period));      // Зазор слева, для большей наглядности
+    qreal right  = static_cast<qreal>(qCeil(1.03 * period));       // Зазор слева, для большей наглядности
+    qreal pause  = static_cast<qreal>(inputPause->value());        // Время паузы высокого уровня между импульсами, мсек
+    qreal min    = static_cast<qreal>(inputMinimum->value());      // Минимальное время импульса и пазу канала, мсек
+    qreal max    = static_cast<qreal>(inputMaximum->value());      // Максимальное время импульса и пазу канала, мсек
+    int count    = channels.count();                               // Количество каналов
 	qreal x = 0.0;
 	qreal y1, y2;
 
 	if (inputInversion->isChecked()) {
-		y1 = 0.0, y2 = 1.0;
+        y1 = 0.0; y2 = 1.0;
 	} else {
-		y1 = 1.0, y2 = 0.0;
+        y1 = 1.0; y2 = 0.0;
 	}
 
 	line->clear();
@@ -507,12 +507,12 @@ void MainWindow::drawPlot()
 
 void MainWindow::updateSyncPulseValue()
 {
-	double sync    = (double) inputPeriod->value();  // Время всей последовательности импульсов, мсек
-	double min     = (double) inputMinimum->value(); // Минимальное время импульса и пазу канала, мсек
-	double max     = (double) inputMaximum->value(); // Максимальное время импульса и пазу канала, мсек
+    double sync    = static_cast<double>(inputPeriod->value());  // Время всей последовательности импульсов, мсек
+    double min     = static_cast<double>(inputMinimum->value()); // Минимальное время импульса и пазу канала, мсек
+    double max     = static_cast<double>(inputMaximum->value()); // Максимальное время импульса и пазу канала, мсек
 
 	foreach (auto *channel, channels) {
-		sync -= (double) channel->spinBox->value() * (max - min) / 100 + min;
+        sync -= static_cast<double>(channel->spinBox->value()) * (max - min) / 100 + min;
 	}
 
 	outputSyncPulse->setMaximum(sync);
@@ -523,7 +523,7 @@ void MainWindow::updateSyncPulseValue()
 void MainWindow::check()
 {
 	// Время импульса синхронизации при максимальном значении всех сигнал, мсек
-	double max = (double) inputMaximum->value();
+    double max = static_cast<double>(inputMaximum->value());
 
 	// Максимальное время импульса и пазу канала, мсек
 	double sync = inputPeriod->value() - max * double(channels.count());
@@ -549,10 +549,10 @@ QPalette MainWindow::gradient(double value, double max)
 
 void MainWindow::xAxisUpdate()
 {
-	qreal period = (qreal) inputPeriod->value();       // Время всей последовательности импульсов, мсек
-	qreal left   = (qreal) -qCeil(0.03 * period);      // Зазор слева, для большей наглядности
-	qreal right  = (qreal) qCeil(1.03 * period);       // Зазор слева, для большей наглядности
-	qreal range  = right - left;                       // Дапазон значений x на графике
+    qreal period = static_cast<qreal>(inputPeriod->value());       // Время всей последовательности импульсов, мсек
+    qreal left   = static_cast<qreal>(-qCeil(0.03 * period));      // Зазор слева, для большей наглядности
+    qreal right  = static_cast<qreal>(qCeil(1.03 * period));       // Зазор слева, для большей наглядности
+    int range    = static_cast<int>(right - left);                 // Дапазон значений x на графике
 
 	// TODO: Дробные значения на оси x выглядят некрасиво.
 	// х.з. что можно с этим сделать

@@ -1,5 +1,5 @@
 //    Arduino PPM Generator
-//    Copyright (C) 2015-2016  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
+//    Copyright (C) 2015-2019  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU General Public License as published by
@@ -14,98 +14,87 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "ModbusSlave.h"
+#include <SimpleModbusSlave.h>
 
 // Максимальное количество каналов
 #define MAX_COUNT 16     
 
 enum State {
-  Pulse,             // Импульс n-го канала
-  StartSync,         // Начало синхроимпульса
-  ContinueSync,      // Продолжение синхроимпульса
-  FinishSync         // окончание синхроимпульса
+	Pulse,             // Импульс n-го канала
+	StartSync,         // Начало синхроимпульса
+	ContinueSync,      // Продолжение синхроимпульса
+	FinishSync         // окончание синхроимпульса
 };
 
 // little endian
 typedef union {
-  unsigned long raw;
-  struct {
-    word low;
-    word high;
-  };
+	unsigned long raw;
+	struct {
+		word low;
+		word high;
+	};
 } long_t;
 
 typedef union __attribute__ ((packed)) {
-  word raw[];
-  struct __attribute__ ((packed)) {
-    word quant;               // 1 мксек в тактах системной частоты
-    word max_count;           // Мксимальное количество каналлов
-    word state;               // 2 - Вкл. (инверсия) / 1 - Вкл. / 0 - Выкл.
-    word count;               // Количество каналов (0 ... MAX_COUNT)
-    word pause;               // Длительности паузы (в тактах системной частоты)
-    long_t sync;              // Длительность импульса синхронизации (в тактах системной частоты)
-    word channel[MAX_COUNT];  // Длительности импульсов (в тактах системной частоты)
-  };
+	word raw[];
+	struct __attribute__ ((packed)) {
+		word quant;               // 1 мксек в тактах системной частоты
+		word max_count;           // Мксимальное количество каналлов
+		word state;               // 2 - Вкл. (инверсия) / 1 - Вкл. / 0 - Выкл.
+		word count;               // Количество каналов (0 ... MAX_COUNT)
+		word pause;               // Длительности паузы (в тактах системной частоты)
+		long_t sync;              // Длительность импульса синхронизации (в тактах системной частоты)
+		word channel[MAX_COUNT];  // Длительности импульсов (в тактах системной частоты)
+	};
 } regs_t;
 
 regs_t tmp;                   // Временный набор данных
 regs_t ppm;                   // Рабочий набор данных
 volatile byte state = Pulse;  // Текущее состояние
 volatile byte current = 0;    // Текущий номер канала
+SimpleModbusSlave slave(1);   // Modbus slave с адресом 1
 
 byte const modbus_registers_count = sizeof(regs_t) / sizeof(word);
-
-word modbus_get_register(word id) {
-	return tmp.raw[id];
-}
-
-void modbus_set_register(word id, word value) {
-  digitalWrite(9, HIGH);
-	if (id > 1) tmp.raw[id] = value;
-
-//  Serial.println(id);
-//  Serial.println(value);  
-  
-  digitalWrite(9, LOW);
-}
 
 // Инициализация контроллера
 void setup() {
 	// Инициализация периферии
-  pinMode(9, OUTPUT);         // Debug
-  pinMode(10, OUTPUT);        // PPM
-  digitalWrite(10, HIGH);
+	pinMode(9, OUTPUT);         // Debug
+	pinMode(10, OUTPUT);        // PPM
+	digitalWrite(10, HIGH);
 
-  // Инициализация значений каналов
-  tmp.state        = 0;
-  tmp.max_count    = MAX_COUNT;
-  tmp.count        = 8;
-  tmp.quant        = F_CPU / 1000000;
-  tmp.pause        = F_CPU / 1000000 * 200;
-  tmp.sync.raw     = F_CPU / 1000000 * 22500 - F_CPU / 1000000 * 300 * 8;
+	// Инициализация значений каналов
+	tmp.state        = 0;
+	tmp.max_count    = MAX_COUNT;
+	tmp.count        = 8;
+	tmp.quant        = F_CPU / 1000000;
+	tmp.pause        = F_CPU / 1000000 * 200;
+	tmp.sync.raw     = F_CPU / 1000000 * 22500 - F_CPU / 1000000 * 300 * 8;
   
-  // Длительность канала 300 мксек
-  for (byte i = 0; i < MAX_COUNT; i++) tmp.channel[i] = 300 * (unsigned long) tmp.quant;
+	// Длительность канала 300 мксек
+	for (byte i = 0; i < MAX_COUNT; i++) tmp.channel[i] = 300 * (unsigned long) tmp.quant;
 
-  // Настраиваем MODBUS
-  modbus_start();
+	// Настраиваем MODBUS
+	slave.setup(115200);
 
- 
-  Serial.println(tmp.state);
-  Serial.println(tmp.count);
-  Serial.println(tmp.pause);
-  Serial.println(tmp.sync.low);
-  Serial.println(tmp.sync.high);
-  Serial.println(tmp.sync.raw);
-  for (byte i = 0; i < MAX_COUNT; i++) {
-    Serial.println(tmp.channel[i]);
-  }
+#ifdef DEBUG
+	Serial.println(tmp.state);
+	Serial.println(tmp.count);
+	Serial.println(tmp.pause);
+	Serial.println(tmp.sync.low);
+	Serial.println(tmp.sync.high);
+	Serial.println(tmp.sync.raw);
+#endif
+
+	for (byte i = 0; i < MAX_COUNT; i++) {
+		Serial.println(tmp.channel[i]);
+	}
 }
 
 // Основной цикл
 void loop() {
 	word lastState = tmp.state;
-	modbus_update();
+	slave.loop(tmp.raw, 10);
 	if (lastState != tmp.state) {
 		tmp.state > 0 ? Start() : Stop();
 	}
@@ -113,7 +102,6 @@ void loop() {
 
 // Запустить генерацию
 void Start() {
-  
 	cli();                                           // Глобальный запрет прерываний
 	ppm = tmp;          
 	TIMSK1 = B00000001;                              // Разрешение прерывания от таймера
@@ -166,9 +154,8 @@ ISR(TIMER1_OVF_vect) {
 	case FinishSync: 
 		OCR1A = ppm.sync.low;
 		OCR1B = ppm.sync.low - ppm.pause;
-    ppm = tmp;
+    	ppm = tmp;
 		state = Pulse;
 		current = 0;
 	}
 }
-

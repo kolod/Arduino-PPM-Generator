@@ -237,8 +237,11 @@ void MainWindow::setupUi()
 	chartView->setRenderHint(QPainter::Antialiasing);
 	chartView->chart()->addSeries(line);
 	chartView->chart()->legend()->hide();
-	chartView->chart()->setAxisX(xAxis, line);
-	chartView->chart()->setAxisY(yAxis, line);
+    chartView->chart()->addAxis(xAxis, Qt::AlignBottom);
+    chartView->chart()->addAxis(yAxis, Qt::AlignLeft);
+
+    line->attachAxis(xAxis);
+    line->attachAxis(yAxis);
 
 	// Вывод длительности синхроимпульса (мксек)
 	labelSyncPulse     = new QLabel(centralWidget);

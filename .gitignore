@@ -1,4 +1,4 @@
 *.o
 build-ppm-generator-Desktop_*-Release/
 build-ppm-generator-Desktop_*-Debug/
-/gui/*.user
+/gui/*.user*

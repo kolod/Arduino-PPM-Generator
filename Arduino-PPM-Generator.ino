@@ -70,7 +70,7 @@ void setup() {
 	tmp.quant        = F_CPU / 1000000;
 	tmp.pause        = F_CPU / 1000000 * 200;
 	tmp.sync.raw     = F_CPU / 1000000 * 22500 - F_CPU / 1000000 * 300 * 8;
-  
+
 	// Длительность канала 300 мксек
 	for (byte i = 0; i < MAX_COUNT; i++) tmp.channel[i] = 300 * (unsigned long) tmp.quant;
 
@@ -103,7 +103,7 @@ void loop() {
 // Запустить генерацию
 void Start() {
 	cli();                                           // Глобальный запрет прерываний
-	ppm = tmp;          
+	ppm    = tmp;                                    // Копируем настройки
 	TIMSK1 = B00000001;                              // Разрешение прерывания от таймера
 	TCCR1A = ppm.state == 2 ? B00110011 : B00100011; // FAST PWM MODE 15
 	TCCR1B = B00011001;                              // Предделитель = 1
@@ -132,15 +132,15 @@ ISR(TIMER1_OVF_vect) {
 		OCR1A = ppm.channel[current];                 // Длительность текущего импульса c паузой
 		OCR1B = ppm.channel[current] - ppm.pause;     // Длительность текущего импульса без паузы  
 
-	  // Переходим к формированию синхроимпульса
-	  if (++current == ppm.count) state = (ppm.sync.high == 0) ? FinishSync : ppm.sync.low > ppm.pause ? ContinueSync : StartSync;                               
-	  break;
+		// Переходим к формированию синхроимпульса
+		if (++current == ppm.count) state = (ppm.sync.high == 0) ? FinishSync : ppm.sync.low > ppm.pause ? ContinueSync : StartSync;                               
+		break;
 
 	// Если младшие ppm.sync.low меньше чем ppm.pause, то начинаем импульс длительностью ppm.pause и
-  // уже на следующем проходе ppm.sync.low будет больше ppm.pause
+	// уже на следующем проходе ppm.sync.low будет больше ppm.pause
 	case StartSync:
-    OCR1B = OCR1A = ppm.pause;
- 		ppm.sync.raw -= ppm.pause;
+		OCR1B = OCR1A = ppm.pause;
+		ppm.sync.raw -= ppm.pause;
 		state = ppm.sync.high ? ContinueSync : FinishSync;
 		break;
 
@@ -152,10 +152,10 @@ ISR(TIMER1_OVF_vect) {
 
 	// Завершение синхроимпульса
 	case FinishSync: 
-		OCR1A = ppm.sync.low;
-		OCR1B = ppm.sync.low - ppm.pause;
-    	ppm = tmp;
-		state = Pulse;
+		OCR1A   = ppm.sync.low;
+		OCR1B   = ppm.sync.low - ppm.pause;
+		ppm     = tmp;      // Обновляем настройки в конце передачи  // TODO: добавить блокировку от частичного обновления
+		state   = Pulse;
 		current = 0;
 	}
 }

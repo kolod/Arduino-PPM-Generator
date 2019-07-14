@@ -39,7 +39,7 @@ typedef union __attribute__ ((packed)) {
 	word raw[];
 	struct __attribute__ ((packed)) {
 		word quant;               // 1 мксек в тактах системной частоты
-		word max_count;           // Мксимальное количество каналлов
+		word max_count;           // Максимальное количество каналов
 		word state;               // 2 - Вкл. (инверсия) / 1 - Вкл. / 0 - Выкл.
 		word count;               // Количество каналов (0 ... MAX_COUNT)
 		word pause;               // Длительности паузы (в тактах системной частоты)
@@ -94,7 +94,7 @@ void setup() {
 // Основной цикл
 void loop() {
 	word lastState = tmp.state;
-	slave.loop(tmp.raw, 10);
+	slave.loop(tmp.raw, sizeof(tmp) / sizeof(tmp.raw[0]));
 	if (lastState != tmp.state) {
 		tmp.state > 0 ? Start() : Stop();
 	}

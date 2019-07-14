@@ -91,7 +91,7 @@ private:
 	bool isFirmwareUploadingRequested;
 
 	QModbusClient  *mClient;
-	ppm            devise;
+	ppm            device;
 	Loader         loader;
 
 	QWidget        *centralWidget;

@@ -61,9 +61,9 @@ void ppm::update()
 	) {
 		if (mQuant > 0) {
 
-			auto request = QModbusDataUnit(QModbusDataUnit::HoldingRegisters, REG_STATE, 5 + mChannel.count());
-			auto sync = quint32(mPeriod * mQuant);
-			auto minSync = quint32(mMaximum * mQuant + 1);
+			auto request = QModbusDataUnit(QModbusDataUnit::HoldingRegisters, REG_STATE, 5 + static_cast<quint16>(mChannel.count()));
+			auto sync    = static_cast<quint32>(mPeriod * mQuant);
+			auto minSync = static_cast<quint32>(mMaximum * mQuant + 1);
 
 			int index = 5;
 			for (int i = 0; i < mChannel.count(); i++) {
@@ -78,9 +78,9 @@ void ppm::update()
 			}
 
 			request.setValue(0, mRun ? mInversion ? 2 : 1 : 0);
-			request.setValue(1, mChannel.count());
+			request.setValue(1, static_cast<quint16>(mChannel.count()));
 			request.setValue(2, uint16_t(mPause * mQuant));
-			request.setValue(3, quint16(sync & 0x0000FFFF));
+			request.setValue(3, quint16(sync       & 0x0000FFFF));
 			request.setValue(4, quint16(sync >> 16 & 0x0000FFFF));
 
 			auto *reply = mClient->sendWriteRequest(request, mAddress);
@@ -92,7 +92,7 @@ void ppm::update()
 						if (reply->error() == QModbusDevice::NoError) {
 							emit updated();
 							if (mRun != mRuning) {
-								if (mRun) emit started(); else emit stoped();
+								if (mRun) emit started(); else emit stopped();
 								mRuning = mRun;
 							}
 						}
@@ -104,6 +104,7 @@ void ppm::update()
 			}
 		} else {
 			readQuant();
+			readState();
 		}
 	}
 }
@@ -148,6 +149,48 @@ void ppm::readQuant()
 					}
 				} else {
 					emit deviceConnectionFailed();
+				}
+			});
+		}
+	} else {
+		delete reply;
+	}
+}
+
+void ppm::readState()
+{
+	auto request = QModbusDataUnit(QModbusDataUnit::HoldingRegisters, REG_STATE, 1);
+	auto *reply = mClient->sendReadRequest(request, mAddress);
+	if (reply) {
+		if (reply->isFinished()) {
+			reply->deleteLater();
+		} else {
+			connect(reply, &QModbusReply::finished, this, [this, reply] {
+				if (reply->error() == QModbusDevice::NoError) {
+					auto result = reply->result();
+					if (result.valueCount() > 0) {
+						auto state = result.value(0);
+						bool lastState = mRun;
+						switch (state) {
+						case 0:
+							mRun = false;
+							if (lastState != mRun) emit stopped();
+							break;
+
+						case 1:
+							mRun = true;
+							mInversion = false;
+							if (lastState != mRun) emit started();
+							emit inversion(false);
+							break;
+
+						case 2:
+							mRun = true;
+							mInversion = true;
+							if (lastState != mRun) emit started();
+							emit inversion(true);
+						}
+					}
 				}
 			});
 		}

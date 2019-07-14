@@ -27,7 +27,7 @@ MainWindow::MainWindow(QWidget *parent)
 	mClient = new QModbusRtuSerialMaster();
 	mClient->setNumberOfRetries(1);
 
-	devise.setModbusClient(mClient);
+	device.setModbusClient(mClient);
 
 	setupUi();
 	retranslateUi();
@@ -53,20 +53,22 @@ MainWindow::MainWindow(QWidget *parent)
 	});
 
 	connect(inputStartStop, &QPushButton::clicked, this, [this] {
-		if (isStarted) devise.stop(); else devise.start();
+		if (isStarted) device.stop(); else device.start();
 	});
 
 	connect(inputInversion, &QCheckBox::toggled, this, [this] (bool invert) {
-		devise.setInversion(invert);
+		device.setInversion(invert);
 		drawPlot();
 	});
 
-	connect(&devise, &ppm::started, this, [this] {
+	connect(&device, &ppm::started, this, [this] {
 		isStarted = true;
 		inputStartStop->setText(tr("Stop"));
 	});
 
-	connect(&devise, &ppm::stoped, this, [this] {
+	connect(&device, &ppm::inversion, inputInversion, &QCheckBox::setChecked);
+
+	connect(&device, &ppm::stopped, this, [this] {
 		isStarted = false;
 		inputStartStop->setText(tr("Start"));
 	});
@@ -78,7 +80,7 @@ MainWindow::MainWindow(QWidget *parent)
 		}
 	});
 
-	connect(&devise, &ppm::deviceConnectionFailed, this, [this] {
+	connect(&device, &ppm::deviceConnectionFailed, this, [this] {
 		QMessageBox message(this);
 		message.setIconPixmap(QPixmap(":/icons/error.svg"));
 		message.setText(tr("The device does not respond."));
@@ -107,27 +109,27 @@ MainWindow::MainWindow(QWidget *parent)
 		}
 	});
 
-	connect(&devise, &ppm::deviceConnected, this, [this] {
+	connect(&device, &ppm::deviceConnected, this, [this] {
 		inputConnect->setText(tr("Disconnect"));
 		inputConnect->setIcon(QIcon(":/icons/disconnect.svg"));
 		inputStartStop->setEnabled(true);
 	});
 
-	connect(&devise, &ppm::deviceDisconnected, this, [this] {
+	connect(&device, &ppm::deviceDisconnected, this, [this] {
 		inputConnect->setText(tr("Connect"));
 		inputConnect->setIcon(QIcon(":/icons/connect.svg"));
 		inputStartStop->setDisabled(true);
 	});
 
-	connect(&devise, &ppm::maxPulseLengthChanged, inputMaximum, &QDoubleSpinBox::setMaximum);
+	connect(&device, &ppm::maxPulseLengthChanged, inputMaximum, &QDoubleSpinBox::setMaximum);
 
 	connect(chartView->chart(), SIGNAL(widthChanged()), this, SLOT(xAxisUpdate()));
 
-	connect(inputChannelsCount, SIGNAL(valueChanged(int)),    &devise, SLOT(setChannelsCount(int)));
-	connect(inputPeriod,        SIGNAL(valueChanged(double)), &devise, SLOT(setPeriod(double)));
-	connect(inputPause,         SIGNAL(valueChanged(double)), &devise, SLOT(setPause(double)));
-	connect(inputMinimum,       SIGNAL(valueChanged(double)), &devise, SLOT(setMinimum(double)));
-	connect(inputMaximum,       SIGNAL(valueChanged(double)), &devise, SLOT(setMaximum(double)));
+	connect(inputChannelsCount, SIGNAL(valueChanged(int)),    &device, SLOT(setChannelsCount(int)));
+	connect(inputPeriod,        SIGNAL(valueChanged(double)), &device, SLOT(setPeriod(double)));
+	connect(inputPause,         SIGNAL(valueChanged(double)), &device, SLOT(setPause(double)));
+	connect(inputMinimum,       SIGNAL(valueChanged(double)), &device, SLOT(setMinimum(double)));
+	connect(inputMaximum,       SIGNAL(valueChanged(double)), &device, SLOT(setMaximum(double)));
 
 	// Обновляем график
 	connect(inputPeriod,        SIGNAL(valueChanged(double)), SLOT(drawPlot()));
@@ -304,13 +306,15 @@ void MainWindow::setupChannelsUi(int count)
 		widgets->spinBox->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
 		widgets->spinBox->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
+#ifdef BINDING
 		widgets->bind = new QPushButton(centralWidget);
 		widgets->bind->setText(tr("Bind"));
 		widgets->bind->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+#endif
 
 		connect(widgets->spinBox, static_cast<void (QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), this, [this, index] (double value) {
 			channels[index]->slider->setValue(int(value * 10));
-			devise.setChanelValue(index, value);
+			device.setChanelValue(index, value);
 			updateSyncPulseValue();
 			drawPlot();
 		});
@@ -320,10 +324,17 @@ void MainWindow::setupChannelsUi(int count)
 		});
 
 		// Расположение виджетов
+
+		gridLayout->addWidget(widgets->label   , 9 + channels.count(), 0, 1, 1);
+		gridLayout->addWidget(widgets->slider  , 9 + channels.count(), 1, 1, 2);
+		gridLayout->addWidget(widgets->spinBox , 9 + channels.count(), 3, 1, 1);
+
+#ifdef BINDING
 		gridLayout->addWidget(widgets->label   , 9 + channels.count(), 0, 1, 1);
 		gridLayout->addWidget(widgets->slider  , 9 + channels.count(), 1, 1, 1);
 		gridLayout->addWidget(widgets->spinBox , 9 + channels.count(), 2, 1, 1);
 		gridLayout->addWidget(widgets->bind    , 9 + channels.count(), 3, 1, 1);
+#endif
 
 		channels.append(widgets);
 	}

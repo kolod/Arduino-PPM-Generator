@@ -39,13 +39,13 @@ class ppm : public QObject
 	Q_OBJECT
 
 public:
-	explicit ppm(QObject *parent = 0);
+	explicit ppm(QObject *parent = nullptr);
 
 public slots:
 	void setModbusClient(QModbusClient *client);
 
-	void start()                    {mRun       = true;    update();}
-	void stop()                     {mRun       = false;   update();}
+	void start()                    {mRun       = true;              update();}
+	void stop()                     {mRun       = false;             update();}
 	void setInversion(bool value)   {mInversion = value;   if (mRun) update();}
 	void setPeriod(double period)   {mPeriod    = period;  if (mRun) update();}
 	void setPause(double pause)     {mPause     = pause;   if (mRun) update();}
@@ -59,6 +59,8 @@ public slots:
 
 	bool isDeviceConnected()    const {return mClient ? mClient->state() == QModbusDevice::ConnectedState   : false;}
 	bool isDeviceDisconnected() const {return mClient ? mClient->state() == QModbusDevice::UnconnectedState : true;}
+	bool isRunning()            const {return mRun;}
+	bool isInverted()           const {return mInversion;}
 
 private:
 	void read(int address, quint16 size);
@@ -67,6 +69,7 @@ private:
 	void write(int command, int value);
 	void write(int command, int channel, int value);
 	void readQuant();
+	void readState();
 	void update();
 
 signals:
@@ -74,10 +77,11 @@ signals:
 	void deviceDisconnected();
 	void deviceConnectionFailed();
 	void started();
-	void stoped();
+	void stopped();
 	void updated();
 	void sync2small();
 	void maxPulseLengthChanged(double value);
+	void inversion(bool state);
 
 private:
 	QModbusClient *mClient;

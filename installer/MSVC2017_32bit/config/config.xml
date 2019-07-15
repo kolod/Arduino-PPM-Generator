@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Installer>
+    <Name>Arduino PPM Generator</Name>
+    <Version>1.0.0</Version>
+    <Title>Arduino PPM Generator</Title>
+    <Publisher>Alexandr Kolodkin</Publisher>
+    <ProductUrl>https://github.com/kolod/Arduino-PPM-Generator</ProductUrl>
+    <MaintenanceToolName>Uninstall</MaintenanceToolName>
+    <AllowNonAsciiCharacters>true</AllowNonAsciiCharacters>
+    <RepositorySettingsPageVisible>false</RepositorySettingsPageVisible>
+    <AllowSpaceInPath>true</AllowSpaceInPath>
+    <SupportsModify>false</SupportsModify>
+    <!-- Directory name is used in component.xml -->
+    <StartMenuDir>Arduino PPM Generator</StartMenuDir>
+    <TargetDir>@ApplicationsDirX86@/Arduino PPM Generator</TargetDir>
+    <ControlScript>controller.qs</ControlScript>
+</Installer>

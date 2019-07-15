@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Package>
+    <DisplayName>Arduino PPM Generator</DisplayName>
+    <Description>The GUI for the Arduino Nano sketch that allows you to generate a PPM signal. It uses hardware 16-bit timer. The pulse duration can be adjusted with an accuracy of 0.0625 microseconds.</Description>
+    <Version>1.0.0</Version>
+    <ReleaseDate>2019-07-14</ReleaseDate>
+    <Default>true</Default>
+    <Script>installscript.qs</Script>
+</Package>

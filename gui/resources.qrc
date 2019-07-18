@@ -10,5 +10,6 @@
     </qresource>
     <qresource prefix="/translations">
         <file>ppm_ru.qm</file>
+        <file>ppm_de.qm</file>
     </qresource>
 </RCC>

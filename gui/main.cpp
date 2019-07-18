@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
 	a.installTranslator(&qtTranslator);
 
 	QTranslator myTranslator;
-	myTranslator.load(":/translations/ppm_ru.qm");
+	myTranslator.load(QLocale(), QLatin1String("ppm"), QLatin1String("_"), QLatin1String(":/translations"));
 	a.installTranslator(&myTranslator);
 
 	MainWindow w;

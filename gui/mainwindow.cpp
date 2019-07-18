@@ -46,7 +46,7 @@ MainWindow::MainWindow(QWidget *parent)
 			QMessageBox message(this);
 			message.setIconPixmap(QPixmap(":/icons/error.svg"));
 			message.setText(tr("Firmware uploading failed."));
-			message.setInformativeText(tr("Please check if the arduino connecterd and right serial port selected."));
+			message.setInformativeText(tr("Please check if the Arduino connected and right serial port selected."));
 			message.setStandardButtons(QMessageBox::Ok);
 			message.exec();
 		}

@@ -73,7 +73,7 @@ void Loader::worker()
 		break;
 
 	case LoaderState::Reset:
-		emit stateChanged(tr("Reseting the Arduino"));
+		emit stateChanged(tr("Resetting the Arduino"));
 		mState = LoaderState::Sync;
 		mPort.setDataTerminalReady(true);
 		mPort.setRequestToSend(true);
@@ -81,7 +81,7 @@ void Loader::worker()
 		break;
 
 	case LoaderState::Sync:
-		emit stateChanged(tr("Retriving the bootloader parameters"));
+		emit stateChanged(tr("Retrieving the bootloader parameters"));
 		mInput.clear();
 		mState = LoaderState::GetHardwareVersion;
 		mExpectedLength = 2;

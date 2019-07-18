@@ -19,18 +19,19 @@ TARGET    = ppm-generator
 TEMPLATE  = app
 
 SOURCES += \
-	main.cpp\
-	mainwindow.cpp \
-	ppm.cpp \
-	loader.cpp
+    main.cpp\
+    mainwindow.cpp \
+    ppm.cpp \
+    loader.cpp
 
 HEADERS  += \
-	mainwindow.h \
-	ppm.h \
-	loader.h
+    mainwindow.h \
+    ppm.h \
+    loader.h
 
 TRANSLATIONS = \
-	ppm_ru.ts
+    ppm_ru.ts \
+    ppm_de.ts
 
 # Версия программы
 VERSION  = 1.0
@@ -39,13 +40,13 @@ VERSION  = 1.0
 QMAKE_TARGET_COMPANY     = Alexandr Kolodkin
 QMAKE_TARGET_PRODUCT     = The PPM Generator
 QMAKE_TARGET_DESCRIPTION = The Arduino based Pulse Position Modulation Generator
-QMAKE_TARGET_COPYRIGHT   = Copyright © 2015-2016 Alexandr Kolodkin
+QMAKE_TARGET_COPYRIGHT   = Copyright © 2015-2019 Alexandr Kolodkin
 
 # Иконка
 win32: RC_ICONS = app.ico
 
 DISTFILES += \
-	app.ico
+    app.ico
 
 RESOURCES += \
-	resources.qrc
+    resources.qrc

@@ -162,25 +162,28 @@ Location: %2
 Description: %3
 Manufacturer: %4
 Vendor Identifier: %5
+Product Identifier: %6</source>
+        <oldsource>Port: %1
+Location: %2
+Description: %3
+Manufacturer: %4
+Vendor Identifier: %5
 Product Identifier: %6
-Busy: %7</source>
+Busy: %7</oldsource>
         <translation>Порт: %1
 Расположение: %2
 Описание: %3
 Производитель: %4
 Код производителя: %5
-Код продукта: %6
-Занят: %7</translation>
+Код продукта: %6</translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="400"/>
         <source>Yes</source>
-        <translation>Да</translation>
+        <translation type="vanished">Да</translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="400"/>
         <source>No</source>
-        <translation>Нет</translation>
+        <translation type="vanished">Нет</translation>
     </message>
 </context>
 </TS>

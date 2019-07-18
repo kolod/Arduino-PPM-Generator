@@ -161,25 +161,28 @@ Location: %2
 Description: %3
 Manufacturer: %4
 Vendor Identifier: %5
+Product Identifier: %6</source>
+        <oldsource>Port: %1
+Location: %2
+Description: %3
+Manufacturer: %4
+Vendor Identifier: %5
 Product Identifier: %6
-Busy: %7</source>
+Busy: %7</oldsource>
         <translation>Port:% 1
 Speicherort:% 2
 Beschreibung:% 3
 Hersteller:% 4
 Herstellerkennung:% 5
-Produktidentifikator:% 6
-Beschäftigt:% 7</translation>
+Produktidentifikator:% 6</translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="400"/>
         <source>Yes</source>
-        <translation>Ja</translation>
+        <translation type="vanished">Ja</translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="400"/>
         <source>No</source>
-        <translation>Nein</translation>
+        <translation type="vanished">Nein</translation>
     </message>
 </context>
 </TS>

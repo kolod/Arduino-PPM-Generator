@@ -157,7 +157,7 @@ void MainWindow::setupUi()
 	centralWidget      = new QWidget(this);
 
 	gridLayout         = new QGridLayout(centralWidget);
-	gridLayout->setMargin(5);
+	gridLayout->setContentsMargins(5, 5, 5, 5);
 
 	statusBar()->show();
 
@@ -388,20 +388,17 @@ void MainWindow::enumeratePorts()
 			"Description: %3\n"
 			"Manufacturer: %4\n"
 			"Vendor Identifier: %5\n"
-			"Product Identifier: %6\n"
-			"Busy: %7"
+			"Product Identifier: %6"
 		  )
 		  .arg(info.portName())
 		  .arg(info.systemLocation())
 		  .arg(info.description())
 		  .arg(info.manufacturer())
 		  .arg(info.hasVendorIdentifier() ? QString::number(info.vendorIdentifier(), 16) : QString())
-		  .arg(info.hasProductIdentifier() ? QString::number(info.productIdentifier(), 16) : QString())
-		  .arg(info.isBusy() ? QObject::tr("Yes") : QObject::tr("No"));
+		  .arg(info.hasProductIdentifier() ? QString::number(info.productIdentifier(), 16) : QString());
 
 		inputPort->addItem(info.portName());
 		inputPort->setItemData(id, QVariant(tooltip), Qt::ToolTipRole);
-		if (info.isBusy()) inputPort->setItemData(id, QVariant(QBrush(Qt::red)), Qt::ForegroundRole);
 		id++;
 	}
 }

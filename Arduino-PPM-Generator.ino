@@ -1,5 +1,5 @@
 //    Arduino PPM Generator
-//    Copyright (C) 2015-2019  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
+//    Copyright (C) 2015-2020  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU General Public License as published by
@@ -16,14 +16,14 @@
 
 #include <SimpleModbusSlave.h>
 
-// Максимальное количество каналов
+// Maximum number of channels
 #define MAX_COUNT 16     
 
 enum State {
-	Pulse,             // Импульс n-го канала
-	StartSync,         // Начало синхроимпульса
-	ContinueSync,      // Продолжение синхроимпульса
-	FinishSync         // окончание синхроимпульса
+	Pulse,             // N-th channel pulse
+	StartSync,         // Start of sync pulse
+	ContinueSync,      // Sync pulse continuation
+	FinishSync         // Sync pulse end
 };
 
 // little endian
@@ -38,32 +38,32 @@ typedef union {
 typedef union __attribute__ ((packed)) {
 	word raw[];
 	struct __attribute__ ((packed)) {
-		word quant;               // 1 мксек в тактах системной частоты
-		word max_count;           // Максимальное количество каналов
-		word state;               // 2 - Вкл. (инверсия) / 1 - Вкл. / 0 - Выкл.
-		word count;               // Количество каналов (0 ... MAX_COUNT)
-		word pause;               // Длительности паузы (в тактах системной частоты)
-		long_t sync;              // Длительность импульса синхронизации (в тактах системной частоты)
-		word channel[MAX_COUNT];  // Длительности импульсов (в тактах системной частоты)
+		word quant;               // 1 microsec per system frequency clock
+		word max_count;           // Maximum number of channels
+		word state;               // 2 - On (inversion) / 1 - On / 0 - Off
+		word count;               // Number of channels (0 ... MAX_COUNT)
+		word pause;               // Duration of pause (in cycles of the system frequency)
+		long_t sync;              // The duration of the synchronization pulse (in cycles of the system frequency)
+		word channel[MAX_COUNT];  // Pulse duration (in cycles of the system frequency)
 	};
 } regs_t;
 
-regs_t tmp;                   // Временный набор данных
-regs_t ppm;                   // Рабочий набор данных
-volatile byte state = Pulse;  // Текущее состояние
-volatile byte current = 0;    // Текущий номер канала
+regs_t tmp;                   // Temporary dataset
+regs_t ppm;                   // Working dataset
+volatile byte state = Pulse;  // Current state
+volatile byte current = 0;    // Current channel number
 SimpleModbusSlave slave(1);   // Modbus slave с адресом 1
 
 byte const modbus_registers_count = sizeof(regs_t) / sizeof(word);
 
-// Инициализация контроллера
+// Controller initialization
 void setup() {
-	// Инициализация периферии
+	// Peripheral initialization
 	pinMode(9, OUTPUT);         // Debug
 	pinMode(10, OUTPUT);        // PPM
 	digitalWrite(10, HIGH);
 
-	// Инициализация значений каналов
+	// Initializing Channel Values
 	tmp.state        = 0;
 	tmp.max_count    = MAX_COUNT;
 	tmp.count        = 8;
@@ -71,7 +71,7 @@ void setup() {
 	tmp.pause        = F_CPU / 1000000 * 200;
 	tmp.sync.raw     = F_CPU / 1000000 * 22500 - F_CPU / 1000000 * 300 * 8;
 
-	// Длительность канала 300 мксек
+	// Channel duration 300 µs
 	for (byte i = 0; i < MAX_COUNT; i++) tmp.channel[i] = 300 * (unsigned long) tmp.quant;
 
 	// Настраиваем MODBUS
@@ -84,14 +84,14 @@ void setup() {
 	Serial.println(tmp.sync.low);
 	Serial.println(tmp.sync.high);
 	Serial.println(tmp.sync.raw);
-#endif
-
+	
 	for (byte i = 0; i < MAX_COUNT; i++) {
 		Serial.println(tmp.channel[i]);
 	}
+#endif
 }
 
-// Основной цикл
+// Main loop
 void loop() {
 	word lastState = tmp.state;
 	slave.loop(tmp.raw, sizeof(tmp) / sizeof(tmp.raw[0]));
@@ -100,61 +100,61 @@ void loop() {
 	}
 }
 
-// Запустить генерацию
+// Run generation
 void Start() {
-	cli();                                           // Глобальный запрет прерываний
-	ppm    = tmp;                                    // Копируем настройки
-	TIMSK1 = B00000001;                              // Разрешение прерывания от таймера
+	cli();                                           // Disable global interrupt
+	ppm    = tmp;                                    // Copy dataset
+	TIMSK1 = B00000001;                              // Enable Timer Interrupt
 	TCCR1A = ppm.state == 2 ? B00110011 : B00100011; // FAST PWM MODE 15
-	TCCR1B = B00011001;                              // Предделитель = 1
+	TCCR1B = B00011001;                              // Prescaler = 1
 	TCCR1C = B00000000;                              //
-	OCR1A  = ppm.channel[0];                         // Длительность первого импульса c паузой
-	OCR1B  = ppm.channel[0] - ppm.pause;             // Длительность первого импульса без паузы
+	OCR1A  = ppm.channel[0];                         // Duration of the first impulse with pause
+	OCR1B  = ppm.channel[0] - ppm.pause;             // The duration of the first pulse without a pause
 	current = 1;                                     //
-	sei();                                           // Глобальное разрешение прерываний
+	sei();                                           // Reenable global interrupt
 }
 
-// Остановить генерацию
+// Stop generation
 void Stop() {
-	cli();             // Глобальный запрет прерываний
-	TCCR1B = 0;        // Останавливаем счетчик
-	TIMSK1 = 0;        // Отключаем прерывание
-	sei();             // Глобальное разрешение прерываний
+	cli();             // Disable global interrupt
+	TCCR1B = 0;        // Stop the timer
+	TIMSK1 = 0;        // Disable timer interrupt
+	sei();             // Reenable global interrupt
 }
 
-// Прерывание при переполнении
+// Timer Overflow interrupt
 ISR(TIMER1_OVF_vect) {
 
 	switch (state) {
 		
 	// Импульс n-го канала
 	case Pulse:		
-		OCR1A = ppm.channel[current];                 // Длительность текущего импульса c паузой
-		OCR1B = ppm.channel[current] - ppm.pause;     // Длительность текущего импульса без паузы  
+		OCR1A = ppm.channel[current];                 // The duration of the current pulse with pause
+		OCR1B = ppm.channel[current] - ppm.pause;     // The duration of the current pulse without a pause  
 
-		// Переходим к формированию синхроимпульса
+		// We proceed to the formation of a clock pulse
 		if (++current == ppm.count) state = (ppm.sync.high == 0) ? FinishSync : ppm.sync.low > ppm.pause ? ContinueSync : StartSync;                               
 		break;
 
-	// Если младшие ppm.sync.low меньше чем ppm.pause, то начинаем импульс длительностью ppm.pause и
-	// уже на следующем проходе ppm.sync.low будет больше ppm.pause
+	// If the minor ppm.sync.low is less than ppm.pause, then we start the impulse with the duration ppm.pause and
+	// on the next pass ppm.sync.low will be more than ppm.pause
 	case StartSync:
 		OCR1B = OCR1A = ppm.pause;
 		ppm.sync.raw -= ppm.pause;
 		state = ppm.sync.high ? ContinueSync : FinishSync;
 		break;
 
-	// Если ppm.sync.high > 0 начинаем импульс максимальной длительности
+	// If ppm.sync.high > 0 start the pulse of maximum duration
 	case ContinueSync: 
 		OCR1A = OCR1B = 0xFFFF;       
 		if (--ppm.sync.high == 0) state = FinishSync;
 		break;
 
-	// Завершение синхроимпульса
+	// Completion of sync pulse
 	case FinishSync: 
 		OCR1A   = ppm.sync.low;
 		OCR1B   = ppm.sync.low - ppm.pause;
-		ppm     = tmp;      // Обновляем настройки в конце передачи  // TODO: добавить блокировку от частичного обновления
+		ppm     = tmp;      // Update setting at the end of the transfer.  // TODO: Add block from partial update.
 		state   = Pulse;
 		current = 0;
 	}

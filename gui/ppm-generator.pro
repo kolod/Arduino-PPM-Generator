@@ -1,5 +1,5 @@
 #    Arduino PPM Generator
-#    Copyright (C) 2015-2017  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
+#    Copyright (C) 2015-2020  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -43,7 +43,7 @@ VERSION  = 1.0
 QMAKE_TARGET_COMPANY     = Alexandr Kolodkin
 QMAKE_TARGET_PRODUCT     = The PPM Generator
 QMAKE_TARGET_DESCRIPTION = The Arduino based Pulse Position Modulation Generator
-QMAKE_TARGET_COPYRIGHT   = Copyright © 2015-2019 Alexandr Kolodkin
+QMAKE_TARGET_COPYRIGHT   = Copyright © 2015-2020 Alexandr Kolodkin
 
 # Иконка
 win32: RC_ICONS = app.ico

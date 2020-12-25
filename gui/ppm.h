@@ -1,5 +1,5 @@
 ﻿//    Arduino PPM Generator
-//    Copyright (C) 2015-2019  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
+//    Copyright (C) 2015-2020  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU General Public License as published by
@@ -26,12 +26,12 @@
 #include <QModbusDataUnit>
 #include <QModbusDevice>
 
-#define REG_QUANT              0           // 1 мксек в тактах системной частоты
-#define REG_MAX_COUNT          1           // Максимальное количество каналов
-#define REG_STATE              2           // Регистр состояния
-#define REG_COUNT              3           // Количество каналов
-#define REG_PAUSE              4           // Пауза
-#define REG_SYNC_LO            5           // Импульс синхронизации
+#define REG_QUANT              0           // 1 μs in system clock cycles
+#define REG_MAX_COUNT          1           // Maximum number of channels
+#define REG_STATE              2           // Status register
+#define REG_COUNT              3           // Number of channels
+#define REG_PAUSE              4           // Pause
+#define REG_SYNC_LO            5           // Synchronization pulse
 #define REG_SYNC_HI            6           //
 
 class ppm : public QObject
@@ -87,15 +87,15 @@ private:
 	QModbusClient *mClient;
 
 	int mAddress;
-	bool mRun;                // Включение генерации
+	bool mRun;                // Enabling generation
 	bool mRuning;             //
-	bool mInversion;          // Инверсия PPM сигнала
-	int mQuant;               // в мсек
-	double mMinimum;          // в мсек
-	double mMaximum;          // в мсек
-	double mPause;            // в мсек
-	double mPeriod;           // в мсек
-	QVector<double> mChannel; // в % от (mMaximum - mMinimum)
+	bool mInversion;          // PPM signal inversion
+	int mQuant;               // in ms
+	double mMinimum;          // in ms
+	double mMaximum;          // in ms
+	double mPause;            // in ms
+	double mPeriod;           // in ms
+	QVector<double> mChannel; // in % of (mMaximum - mMinimum)
 };
 
 #endif // PPM_H

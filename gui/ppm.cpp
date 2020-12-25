@@ -1,5 +1,5 @@
 ﻿//    Arduino PPM Generator
-//    Copyright (C) 2015-2019  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
+//    Copyright (C) 2015-2020  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU General Public License as published by
@@ -47,7 +47,7 @@ void ppm::setModbusClient(QModbusClient *client)
 	});
 }
 
-// Передать новые параметры в устройство, если соблюдены все условия
+// Transfer new parameters to the device if all conditions are met
 void ppm::update()
 {
 	if (
@@ -78,10 +78,10 @@ void ppm::update()
 			}
 
 			request.setValue(0, mRun ? mInversion ? 2 : 1 : 0);
-			request.setValue(1, static_cast<quint16>(mChannel.count()));
-			request.setValue(2, uint16_t(mPause * mQuant));
-			request.setValue(3, quint16(sync       & 0x0000FFFF));
-			request.setValue(4, quint16(sync >> 16 & 0x0000FFFF));
+			request.setValue(1, mChannel.count());
+			request.setValue(2, mPause * mQuant);
+			request.setValue(3, sync       & 0x0000FFFF);
+			request.setValue(4, sync >> 16 & 0x0000FFFF);
 
 			auto *reply = mClient->sendWriteRequest(request, mAddress);
 			if (reply) {
@@ -109,7 +109,7 @@ void ppm::update()
 	}
 }
 
-// Установить количество каналов
+// Set the number of channels
 void ppm::setChannelsCount(int count)
 {
 	int oldCount = mChannel.count();
@@ -118,7 +118,7 @@ void ppm::setChannelsCount(int count)
 	update();
 }
 
-// Установит значение канала в %
+// Set channel value in %
 void ppm::setChanelValue(int chanel, double value)
 {
 	if ((chanel >= 0) && (chanel < mChannel.count())) {

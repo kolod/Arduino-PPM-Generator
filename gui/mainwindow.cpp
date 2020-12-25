@@ -59,7 +59,7 @@ MainWindow::MainWindow(QWidget *parent)
 	});
 
 	connect(inputInversion, &QCheckBox::toggled, this, [this] (bool invert) {
-		device.setInversion(invert);
+		device.setProperty(DEVICE_PROPERTY_INVERSION, invert);
 		drawPlot();
 	});
 
@@ -68,7 +68,18 @@ MainWindow::MainWindow(QWidget *parent)
 		inputStartStop->setText(tr("Stop"));
 	});
 
-	connect(&device, &ppm::inversion, inputInversion, &QCheckBox::setChecked);
+	connect(&device, &ppm::propertyChanged, this, [this](int id, QVariant value) {
+		switch (id) {
+		case DEVICE_PROPERTY_INVERSION:
+			inputInversion->setChecked(value.toBool());
+			break;
+
+		case DEVICE_PROPERTY_MAX_PULSE:
+			inputMaximum->setMaximum(value.toDouble());
+			break;
+
+		};
+	});
 
 	connect(&device, &ppm::stopped, this, [this] {
 		isStarted = false;
@@ -123,7 +134,6 @@ MainWindow::MainWindow(QWidget *parent)
 		inputStartStop->setDisabled(true);
 	});
 
-	connect(&device, &ppm::maxPulseLengthChanged, inputMaximum, &QDoubleSpinBox::setMaximum);
 
 	connect(chartView->chart(), SIGNAL(widthChanged()), this, SLOT(xAxisUpdate()));
 

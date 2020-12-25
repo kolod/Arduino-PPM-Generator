@@ -26,6 +26,8 @@
 #include <QModbusDataUnit>
 #include <QModbusDevice>
 
+#include "device.h"
+
 #define REG_QUANT              0           // 1 μs in system clock cycles
 #define REG_MAX_COUNT          1           // Maximum number of channels
 #define REG_STATE              2           // Status register
@@ -34,33 +36,25 @@
 #define REG_SYNC_LO            5           // Synchronization pulse
 #define REG_SYNC_HI            6           //
 
-class ppm : public QObject
+#define DEVICE_PROPERTY_INVERSION    1
+#define DEVICE_PROPERTY_PERIOD       2
+#define DEVICE_PROPERTY_PAUSE        3
+#define DEVICE_PROPERTY_MIN          4
+#define DEVICE_PROPERTY_MAX          5
+#define DEVICE_PROPERTY_MAX_PULSE    6
+#define DEVICE_PROPERTY_TOO_SMALL    7
+
+
+class ppm : public Device
 {
 	Q_OBJECT
 
 public:
 	explicit ppm(QObject *parent = nullptr);
+	QVariant property(int id) override;
 
 public slots:
-	void setModbusClient(QModbusClient *client);
-
-	void start()                    {mRun       = true;              update();}
-	void stop()                     {mRun       = false;             update();}
-	void setInversion(bool value)   {mInversion = value;   if (mRun) update();}
-	void setPeriod(double period)   {mPeriod    = period;  if (mRun) update();}
-	void setPause(double pause)     {mPause     = pause;   if (mRun) update();}
-	void setMinimum(double minimum) {mMinimum   = minimum; if (mRun) update();}
-	void setMaximum(double maximum) {mMaximum   = maximum; if (mRun) update();}
-
-	void setChannelsCount(int count);
-	void setChanelValue(int chanel, double value);
-
-	double maxPulseLength();
-
-	bool isDeviceConnected()    const {return mClient ? mClient->state() == QModbusDevice::ConnectedState   : false;}
-	bool isDeviceDisconnected() const {return mClient ? mClient->state() == QModbusDevice::UnconnectedState : true;}
-	bool isRunning()            const {return mRun;}
-	bool isInverted()           const {return mInversion;}
+	bool setProperty(int id, QVariant value) override;
 
 private:
 	void read(int address, quint16 size);
@@ -70,32 +64,18 @@ private:
 	void write(int command, int channel, int value);
 	void readQuant();
 	void readState();
-	void update();
+	void update() override;
+	double maxPulseLength();
 
-signals:
-	void deviceConnected();
-	void deviceDisconnected();
-	void deviceConnectionFailed();
-	void started();
-	void stopped();
-	void updated();
-	void sync2small();
-	void maxPulseLengthChanged(double value);
-	void inversion(bool state);
+	void connectionFailed() override {mQuant = 0;}
 
 private:
-	QModbusClient *mClient;
-
-	int mAddress;
-	bool mRun;                // Enabling generation
-	bool mRuning;             //
 	bool mInversion;          // PPM signal inversion
 	int mQuant;               // in ms
 	double mMinimum;          // in ms
 	double mMaximum;          // in ms
 	double mPause;            // in ms
 	double mPeriod;           // in ms
-	QVector<double> mChannel; // in % of (mMaximum - mMinimum)
 };
 
 #endif // PPM_H

@@ -22,12 +22,14 @@ DEFINES  += QT_DEPRECATED_WARNINGS
 DEFINES  += QT_DISABLE_DEPRECATED_BEFORE=0x060000
 
 SOURCES += \
+    device.cpp \
     main.cpp\
     mainwindow.cpp \
     ppm.cpp \
     loader.cpp
 
 HEADERS  += \
+    device.h \
     mainwindow.h \
     ppm.h \
     loader.h

@@ -20,32 +20,55 @@
 #include "ppm.h"
 
 ppm::ppm(QObject *parent)
-	: QObject(parent)
-	, mClient(nullptr)
-	, mAddress(1)
-	, mRun(false)
-	, mRuning(false)
-	, mInversion(false)
-	, mQuant(0)
-	, mMinimum(0.0)
-	, mMaximum(0.0)
-	, mPause(0.0)
-	, mPeriod(0.0)
+    : Device(parent)
+    , mInversion(false)
+    , mQuant(0)
+    , mMinimum(0.0)
+    , mMaximum(0.0)
+    , mPause(0.0)
+    , mPeriod(0.0)
 {}
 
-void ppm::setModbusClient(QModbusClient *client)
-{
-	mClient = client;
-	connect(mClient, &QModbusClient::stateChanged, this, [this] {
-		if (mClient->state() == QModbusDevice::ConnectedState) {
-			update();
-			emit deviceConnected();
-		} else {
-			mQuant = 0;
-			emit deviceDisconnected();
-		}
-	});
+QVariant ppm::property(int id) {
+	switch (id) {
+	case DEVICE_PROPERTY_INVERSION:  return mInversion;
+	case DEVICE_PROPERTY_PERIOD:     return mPeriod;
+	case DEVICE_PROPERTY_PAUSE:      return mPause;
+	case DEVICE_PROPERTY_MIN:        return mMinimum;
+	case DEVICE_PROPERTY_MAX:        return mMaximum;
+	case DEVICE_PROPERTY_MAX_PULSE:  return maxPulseLength();
+	}
 }
+
+bool ppm::setProperty(int id, QVariant value) {
+	switch (id) {
+	case DEVICE_PROPERTY_INVERSION:
+		if (value.type() == QVariant::Bool) return mInversion = value.toBool(), true;
+		break;
+
+	case DEVICE_PROPERTY_PERIOD:
+		if (value.type() == QVariant::Double) return mPeriod = value.toDouble(), true;
+		break;
+
+	case DEVICE_PROPERTY_PAUSE:
+		if (value.type() == QVariant::Double) return mPause = value.toDouble(), true;
+		break;
+
+	case DEVICE_PROPERTY_MIN:
+		if (value.type() == QVariant::Double) return mMinimum = value.toDouble(), true;
+		break;
+
+	case DEVICE_PROPERTY_MAX:
+		if (value.type() == QVariant::Double) return mMaximum = value.toDouble(), true;
+		break;
+
+	case DEVICE_PROPERTY_MAX_PULSE: // read only
+		break;
+
+	}
+	return false;
+}
+
 
 // Transfer new parameters to the device if all conditions are met
 void ppm::update()
@@ -72,7 +95,7 @@ void ppm::update()
 				request.setValue(index++, channel);
 				if (sync < minSync) {
 					qDebug() << "sync2small" << sync << minSync;
-					emit sync2small();
+					emit propertyChanged(DEVICE_PROPERTY_TOO_SMALL, true);
 					return;
 				}
 			}
@@ -109,24 +132,6 @@ void ppm::update()
 	}
 }
 
-// Set the number of channels
-void ppm::setChannelsCount(int count)
-{
-	int oldCount = mChannel.count();
-	mChannel.resize(count);
-	for (int i = oldCount; i < count; mChannel[i++] = 0.0);
-	update();
-}
-
-// Set channel value in %
-void ppm::setChanelValue(int chanel, double value)
-{
-	if ((chanel >= 0) && (chanel < mChannel.count())) {
-		mChannel[chanel] = qBound(0.0, value, 100.0);
-		update();
-	}
-}
-
 void ppm::readQuant()
 {
 	auto request = QModbusDataUnit(QModbusDataUnit::HoldingRegisters, REG_QUANT, 1);
@@ -142,7 +147,7 @@ void ppm::readQuant()
 						auto quant = result.value(0);
 						if (quant == 0) emit deviceConnectionFailed();
 						mQuant = quant * 1000;
-						emit maxPulseLengthChanged(maxPulseLength());
+						emit propertyChanged(DEVICE_PROPERTY_MAX_PULSE, maxPulseLength());
 						update();
 					} else {
 						emit deviceConnectionFailed();
@@ -181,14 +186,14 @@ void ppm::readState()
 							mRun = true;
 							mInversion = false;
 							if (lastState != mRun) emit started();
-							emit inversion(false);
+							emit propertyChanged(DEVICE_PROPERTY_INVERSION, false);
 							break;
 
 						case 2:
 							mRun = true;
 							mInversion = true;
 							if (lastState != mRun) emit started();
-							emit inversion(true);
+							emit propertyChanged(DEVICE_PROPERTY_INVERSION, true);
 						}
 					}
 				}

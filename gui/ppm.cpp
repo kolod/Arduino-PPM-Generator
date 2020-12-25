@@ -37,6 +37,7 @@ QVariant ppm::property(int id) {
 	case DEVICE_PROPERTY_MIN:        return mMinimum;
 	case DEVICE_PROPERTY_MAX:        return mMaximum;
 	case DEVICE_PROPERTY_MAX_PULSE:  return maxPulseLength();
+	default: return QVariant();
 	}
 }
 

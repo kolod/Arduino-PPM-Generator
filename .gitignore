@@ -3,7 +3,7 @@ build-ppm-generator-Desktop_*-Release/
 build-ppm-generator-Desktop_*-Debug/
 /gui/*.user*
 /SaleaeLogicDump
-/installer/MSVC2017_*bit/*.exe
-/installer/MSVC2017_*bit/packages/org.kolodkin.ppm/data
+/installer/MSVC20*bit/*.exe
+/installer/MSVC20*bit/packages/org.kolodkin.ppm/data
 /installer/ppm-installer-*bit.exe
 *.bak

@@ -36,7 +36,7 @@ typedef union {
 } long_t;
 
 typedef union __attribute__ ((packed)) {
-	word raw[];
+	word raw[6+MAX_COUNT];
 	struct __attribute__ ((packed)) {
 		word quant;               // 1 microsec per system frequency clock
 		word max_count;           // Maximum number of channels

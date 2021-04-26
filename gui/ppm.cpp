@@ -1,5 +1,5 @@
 ﻿//    Arduino PPM Generator
-//    Copyright (C) 2015-2020  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
+//    Copyright (C) 2015-2021  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU General Public License as published by
@@ -78,8 +78,8 @@ void ppm::update()
 			}
 
 			request.setValue(0, mRun ? mInversion ? 2 : 1 : 0);
-			request.setValue(1, mChannel.count());
-			request.setValue(2, mPause * mQuant);
+            request.setValue(1, static_cast<quint16>(mChannel.count()));
+            request.setValue(2, static_cast<quint16>(mPause * mQuant));
 			request.setValue(3, sync       & 0x0000FFFF);
 			request.setValue(4, sync >> 16 & 0x0000FFFF);
 

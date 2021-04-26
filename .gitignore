@@ -1,6 +1,6 @@
 *.o
-build-ppm-generator-Desktop_*-Release/
-build-ppm-generator-Desktop_*-Debug/
+build-ppm-generator-Desktop*-Release/
+build-ppm-generator-Desktop*-Debug/
 /gui/*.user*
 /SaleaeLogicDump
 /installer/MSVC2017_*bit/*.exe

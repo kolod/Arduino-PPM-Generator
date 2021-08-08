@@ -2,14 +2,10 @@
     <qresource prefix="/">
         <file>firmware.bin</file>
     </qresource>
-    <qresource prefix="/icons">
-        <file>connect.svg</file>
-        <file>disconnect.svg</file>
-        <file>update.svg</file>
-        <file>error.svg</file>
-    </qresource>
-    <qresource prefix="/translations">
-        <file>ppm_ru.qm</file>
-        <file>ppm_de.qm</file>
+    <qresource prefix="/">
+        <file>icons/connect.svg</file>
+        <file>icons/disconnect.svg</file>
+        <file>icons/update.svg</file>
+        <file>icons/error.svg</file>
     </qresource>
 </RCC>

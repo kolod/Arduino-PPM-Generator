@@ -1,39 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
-<TS version="2.1" language="de_DE">
+<TS version="2.1" language="uk" sourcelanguage="en">
 <context>
     <name>Loader</name>
     <message>
         <location filename="loader.cpp" line="76"/>
         <source>Resetting the Arduino</source>
-        <oldsource>Reseting the Arduino</oldsource>
-        <translation>Zurücksetzen des Arduino</translation>
+        <translation>Скидання ардуіно</translation>
     </message>
     <message>
         <location filename="loader.cpp" line="84"/>
         <source>Retrieving the bootloader parameters</source>
-        <oldsource>Retriving the bootloader parameters</oldsource>
-        <translation>Abrufen der Bootloader Parameter</translation>
+        <translation>Отримання параметрів завантажувача</translation>
     </message>
     <message>
         <location filename="loader.cpp" line="144"/>
         <source>Uploading firmware</source>
-        <translation>Firmware wird hochgeladen</translation>
+        <translation>Обновлення прошивки</translation>
     </message>
     <message>
         <location filename="loader.cpp" line="149"/>
         <source>Validating firmware</source>
-        <translation>Firmware validieren</translation>
+        <translation>Перевірка прошивки</translation>
     </message>
     <message>
         <location filename="loader.cpp" line="260"/>
         <source>Wait device ready</source>
-        <translation>Warten Sie, bis das Gerät bereit ist</translation>
+        <translation>Очікування готовності пристрою</translation>
     </message>
     <message>
         <location filename="loader.cpp" line="274"/>
         <source>Error: Timeout</source>
-        <translation>Fehler: Timeout</translation>
+        <translation>Помилка: перевищення часу очікування</translation>
     </message>
 </context>
 <context>
@@ -47,116 +45,114 @@
         <location filename="mainwindow.ui" line="27"/>
         <location filename="mainwindow.cpp" line="372"/>
         <source>Channels count:</source>
-        <translatorcomment>Anzahl der Kanäle:</translatorcomment>
-        <translation>Anzahl der Kanale:</translation>
+        <translation>Кількість каналів:</translation>
     </message>
     <message>
         <location filename="mainwindow.cpp" line="54"/>
         <source>Firmware uploading failed.</source>
-        <translation>Firmware update fehlgeschlagen.</translation>
+        <translation>Завантаження прошивки не вдалося.</translation>
     </message>
     <message>
         <location filename="mainwindow.cpp" line="55"/>
         <source>Please check if the Arduino connected and right serial port selected.</source>
-        <oldsource>Please check if the arduino connecterd and right serial port selected.</oldsource>
-        <translation>Bitte uberprufen Sie, ob der Arduino angeschlossen und der richtige serielle Port ausgewahlt ist.</translation>
+        <translation>Будьласка перевірте, що ардуино підключено та обран вірний порт.</translation>
     </message>
     <message>
         <location filename="mainwindow.cpp" line="72"/>
         <source>Stop</source>
-        <translation>Halt</translation>
+        <translation>Стоп</translation>
     </message>
     <message>
         <location filename="mainwindow.cpp" line="79"/>
         <location filename="mainwindow.cpp" line="382"/>
         <source>Start</source>
-        <translation>Start</translation>
+        <translation>Пуск</translation>
     </message>
     <message>
         <location filename="mainwindow.cpp" line="92"/>
         <source>The device does not respond.</source>
-        <translation>Das Gerat reagiert nicht.</translation>
+        <translation>Пристрій не відповідає.</translation>
     </message>
     <message>
         <location filename="mainwindow.cpp" line="93"/>
         <source>Try to update the firmware?</source>
-        <translation>Versuchen Sie, die Firmware zu aktualisieren?</translation>
+        <translation>Спробувати обновити прошивку?</translation>
     </message>
     <message>
         <location filename="mainwindow.cpp" line="119"/>
         <source>Disconnect</source>
-        <translation>Trennen</translation>
+        <translation>Відключитися</translation>
     </message>
     <message>
         <location filename="mainwindow.cpp" line="125"/>
         <location filename="mainwindow.cpp" line="380"/>
         <source>Connect</source>
-        <translation>Verbinden</translation>
+        <translation>Підключитися</translation>
     </message>
     <message>
         <location filename="mainwindow.cpp" line="301"/>
         <source>Channel #%1, %:</source>
-        <translation>Kanal #%1, %:</translation>
+        <translation>Канал №%1 %:</translation>
     </message>
     <message>
         <location filename="mainwindow.cpp" line="317"/>
         <source>Bind</source>
-        <translation>Binden</translation>
+        <translation>Зв&apos;язати</translation>
     </message>
     <message>
         <location filename="mainwindow.cpp" line="371"/>
         <source>Arduino PPM Generator</source>
-        <translation>Arduino PPM Generator</translation>
+        <translation></translation>
     </message>
     <message>
         <location filename="mainwindow.cpp" line="373"/>
         <source>Period, ms:</source>
-        <translation>Periode, ms:</translation>
+        <translation>Період, мсек:</translation>
     </message>
     <message>
         <location filename="mainwindow.cpp" line="374"/>
         <source>Pause, ms:</source>
-        <translation>Pause, ms:</translation>
+        <translation>Период, мсек:</translation>
     </message>
     <message>
         <location filename="mainwindow.cpp" line="375"/>
         <source>Minimum, ms:</source>
-        <translation>Minimum, ms:</translation>
+        <translation>Мінімум, мсек:</translation>
     </message>
     <message>
         <location filename="mainwindow.cpp" line="376"/>
         <source>Maximum, ms:</source>
-        <translation>Maximum, ms:</translation>
+        <translation>Максімум, мсек:</translation>
     </message>
     <message>
         <location filename="mainwindow.cpp" line="377"/>
         <source>Serial port:</source>
-        <translation>Serielle Schnittstelle:</translation>
+        <translation>Порт:</translation>
     </message>
     <message>
         <location filename="mainwindow.cpp" line="378"/>
         <source>Update</source>
-        <translation>Aktualisieren</translation>
+        <translation>Обновити</translation>
     </message>
     <message>
         <location filename="mainwindow.cpp" line="379"/>
         <source>Baud rate, Bd:</source>
-        <translation>Baudrate, Bd:</translation>
+        <translation>Швидкість, бод/сек:</translation>
     </message>
     <message>
         <location filename="mainwindow.cpp" line="381"/>
         <source>Sync period, ms:</source>
-        <translation>Synchronisationszeitraum, ms:</translation>
+        <translation>Сінхроімпульс, мсек:</translation>
     </message>
     <message>
         <location filename="mainwindow.cpp" line="383"/>
         <source>Inversion</source>
-        <translation>Inversion</translation>
+        <translation>Інверсія</translation>
     </message>
     <message>
         <location filename="mainwindow.cpp" line="384"/>
         <source>Time, ms</source>
-        <translation>Zeit, ms</translation>
+        <translation>Час, мсек</translation>
     </message>
 </context>
 <context>
@@ -169,12 +165,12 @@ Description: %3
 Manufacturer: %4
 Vendor Identifier: %5
 Product Identifier: %6</source>
-        <translation>Port:%1
-Speicherort:%2
-Beschreibung:%3
-Hersteller:%4
-Herstellerkennung:%5
-Produktidentifikator:%6</translation>
+        <translation>Порт: %1
+Розташуванняе: %2
+Опис: %3
+Виробник: %4
+Ідентифікатор виробника: %5
+Ідентифікатор продукту: %6</translation>
     </message>
 </context>
 </TS>

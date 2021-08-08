@@ -24,7 +24,11 @@ MainWindow::MainWindow(QWidget *parent)
 	, isStarted(false)
 	, isFirmwareUploadingRequested(false)
 {
+#if QT_VERSION >= 0x060000
+	mClient = new QModbusRtuSerialClient();
+#else
 	mClient = new QModbusRtuSerialMaster();
+#endif
 	mClient->setNumberOfRetries(1);
 
 	device.setModbusClient(mClient);
@@ -226,10 +230,10 @@ void MainWindow::setupUi()
 	inputMaximum->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
 
 	// Graph
-	line               = new QtCharts::QLineSeries;
-	xAxis              = new QtCharts::QValueAxis;
-	yAxis              = new QtCharts::QValueAxis;
-	chartView          = new QtCharts::QChartView;
+	line               = new QLineSeries;
+	xAxis              = new QValueAxis;
+	yAxis              = new QValueAxis;
+	chartView          = new QChartView;
 
 	xAxis->setMinorTickCount(5);
 

@@ -19,6 +19,7 @@
 
 //using namespace QtCharts;
 
+#include <QtGlobal>
 #include <QMainWindow>
 #include <QSettings>
 #include <QString>
@@ -45,10 +46,18 @@
 #include <QLineSeries>
 #include <QDateTimeAxis>
 #include <QValueAxis>
-#include <QChart>
 #include <QMessageBox>
 #include <QFile>
 #include <QStatusBar>
+
+#include <QChart>
+#include <QChartView>
+#include <QLineSeries>
+#include <QValueAxis>
+
+#if QT_VERSION < 0x060000
+using namespace QtCharts;
+#endif
 
 #include "ppm.h"
 #include "loader.h"
@@ -125,10 +134,10 @@ private:
 
 	QVector<TChannelWidgets*> channels;
 
-	QtCharts::QChartView *chartView;
-	QtCharts::QLineSeries *line;
-	QtCharts::QValueAxis *xAxis;
-	QtCharts::QValueAxis *yAxis;
+	QChartView *chartView;
+	QLineSeries *line;
+	QValueAxis *xAxis;
+	QValueAxis *yAxis;
 
 };
 

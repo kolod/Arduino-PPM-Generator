@@ -41,6 +41,11 @@ class ppm : public QObject
 public:
 	explicit ppm(QObject *parent = nullptr);
 
+	bool isDeviceConnected()    const {return mClient ? mClient->state() == QModbusDevice::ConnectedState   : false;}
+	bool isDeviceDisconnected() const {return mClient ? mClient->state() == QModbusDevice::UnconnectedState : true;}
+	bool isRunning()            const {return mRun;}
+	bool isInverted()           const {return mInversion;}
+
 public slots:
 	void setModbusClient(QModbusClient *client);
 
@@ -56,11 +61,6 @@ public slots:
 	void setChanelValue(int chanel, double value);
 
 	double maxPulseLength();
-
-	bool isDeviceConnected()    const {return mClient ? mClient->state() == QModbusDevice::ConnectedState   : false;}
-	bool isDeviceDisconnected() const {return mClient ? mClient->state() == QModbusDevice::UnconnectedState : true;}
-	bool isRunning()            const {return mRun;}
-	bool isInverted()           const {return mInversion;}
 
 private:
 	void read(int address, quint16 size);

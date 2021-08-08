@@ -1,5 +1,5 @@
 ﻿//    Arduino PPM Generator
-//    Copyright (C) 2015-2020  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
+//    Copyright (C) 2015-2021  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU General Public License as published by
@@ -484,9 +484,9 @@ void MainWindow::drawPlot()
 	qreal y1, y2;
 
 	if (inputInversion->isChecked()) {
-		y1 = 0.0, y2 = 1.0;
+        y1 = 0.0; y2 = 1.0;
 	} else {
-		y1 = 1.0, y2 = 0.0;
+        y1 = 1.0; y2 = 0.0;
 	}
 
 	line->clear();
@@ -542,7 +542,7 @@ void MainWindow::updateSyncPulseValue()
 void MainWindow::check()
 {
 	// Maximum channel pulse and pause time (milliseconds)
-	double max = (double) inputMaximum->value();
+    double max = inputMaximum->value();
 
 	// Synchronization pulse time at the maximum value of all signals (milliseconds)
 	double sync = inputPeriod->value() - max * double(channels.count());

@@ -1,5 +1,5 @@
 //    Arduino PPM Generator
-//    Copyright (C) 2015-2020  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
+//    Copyright (C) 2015-2021  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU General Public License as published by
@@ -102,8 +102,6 @@ public:
 	void setPortName(QString name) {mPort.setPortName(name);}
 	void uploadFirmware(QByteArray data);
 	void validateFirmware(QByteArray data);
-
-
 
 signals:
 	void resetFinished();

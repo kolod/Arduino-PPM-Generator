@@ -15,9 +15,9 @@ The pulse duration is adjusted with an accuracy of 0.0625 microseconds.
 | 2   |  RW  | 2            | State 0 - Off / 1 - On / 2 - On inverted |
 | 3   |  RW  | 2            | Channels count                           |
 | 4   |  RW  | 2            | Pause length in the clock ticks          |
-| 5   |  RW  | 4            | Synchro pulse length in the clock ticks  |
-| 6   |  RW  | 2            | Channel #1 duration in the clock ticks   |
+| 5,6 |  RW  | 4            | Synchro pulse length in the clock ticks  |
+| 7   |  RW  | 2            | Channel #1 duration in the clock ticks   |
 | ... |  ... | ...          | ...                                      |
-| n+6 |  RW  | 2            | Channel #n duration in the clock ticks   |
+| n+7 |  RW  | 2            | Channel #n duration in the clock ticks   |
 
 ![ppm](https://raw.githubusercontent.com/kolod/Arduino-PPM-Generator/master/ppm.svg)

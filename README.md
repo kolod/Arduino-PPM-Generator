@@ -22,4 +22,5 @@ The pulse duration is adjusted with an accuracy of 0.0625 microseconds.
 | ... |  ... | ...          | ...                                      |
 | n+7 |  RW  | 2            | Channel #n duration in the clock ticks   |
 
-![ppm](https://raw.githubusercontent.com/kolod/Arduino-PPM-Generator/master/ppm.svg)
+![ppm](https://raw.githubusercontent.com/kolod/Arduino-PPM-Generator/master/ppm-dark.svg#gh-dark-mode-only)
+![ppm](https://raw.githubusercontent.com/kolod/Arduino-PPM-Generator/master/ppm-light.svg#gh-light-mode-only)

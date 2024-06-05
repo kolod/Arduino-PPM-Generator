@@ -3,4 +3,5 @@
 /gui/i18n/*
 /build-*-Release/
 /build-*-Debug/
+/gui/build/*
 /installer/MSVC2017_*bit/*

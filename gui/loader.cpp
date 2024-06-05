@@ -62,7 +62,7 @@ void Loader::worker()
 	// If incoming message expected
 	if (mExpectedLength) {
 		mInput.append(mPort.readAll());
-		if (mInput.count() < mExpectedLength) return;
+        if (mInput.size() < mExpectedLength) return;
 		if (!mInput.startsWith(STK_INSYNC) || !mInput.endsWith(STK_OK)) clear();
 	}
 
@@ -188,7 +188,7 @@ void Loader::worker()
 		mOutput.append('F');
 
 		for (int i = mAddress; i < mAddress + mPageSize; i++) {
-			mOutput.append(i >= mFirmware.count() ? '\xFF' : mFirmware[i]);
+            mOutput.append(i >= mFirmware.size() ? '\xFF' : mFirmware[i]);
 		}
 
 		mOutput.append(CRC_EOP);
@@ -220,7 +220,7 @@ void Loader::worker()
 
 		if (mAction == LoaderAction::Validate) {
 			for (int j = 1, i = mAddress; i < mAddress + mPageSize; i++, j++) {
-				if (i < mFirmware.count()) {
+                if (i < mFirmware.size()) {
 					if (mInput[j] != mFirmware[i]) clear();
 				} else {
 					if (mInput[j] != '\xFF') clear();
@@ -232,7 +232,7 @@ void Loader::worker()
 		mInput.clear();
 
 		mAddress += mPageSize;
-		if (mAddress < mFirmware.count()) {
+        if (mAddress < mFirmware.size()) {
 			mState = LoaderState::SetAddress;
 		} else {
 			if (mAction == LoaderAction::Upload) {

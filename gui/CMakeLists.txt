@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.18)
 
 project(ppm-generator VERSION 1.1.0 LANGUAGES CXX)
 
@@ -43,16 +43,15 @@ set(PROJECT_SOURCES
     ppm.h
     ${TS_FILES}
     ${QRC_FILES}
-#    ${APP_WINDOWS_RESOURCE}
 )
 
 if(WIN32)
     list(APPEND PROJECT_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/resources.rc")
 endif()
 
-qt_add_executable(ppm-generator WIN32 MANUAL_FINALIZATION ${PROJECT_SOURCES})
-qt_add_lupdate(ppm-generator TS_FILES ${TS_FILES} OPTIONS -locations relative -no-obsolete)
-qt_add_lrelease(ppm-generator TS_FILES ${TS_FILES} QM_FILES_OUTPUT_VARIABLE QM_FILES OPTIONS -compress -removeidentical)
+qt6_add_executable(ppm-generator WIN32 MANUAL_FINALIZATION ${PROJECT_SOURCES})
+qt6_add_lupdate(ppm-generator TS_FILES ${TS_FILES} OPTIONS -locations relative -no-obsolete)
+qt6_add_lrelease(ppm-generator TS_FILES ${TS_FILES} QM_FILES_OUTPUT_VARIABLE QM_FILES OPTIONS -compress -removeidentical)
 
 target_link_libraries(ppm-generator PRIVATE
     Qt6::Widgets
@@ -67,9 +66,7 @@ set_target_properties(ppm-generator PROPERTIES
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
 )
 
-if(QT_VERSION_MAJOR EQUAL 6)
-    qt_finalize_executable(ppm-generator)
-endif()
+qt6_finalize_target(ppm-generator)
 
 # Installation
 set(CPACK_PACKAGE_CONTACT "oleksandr.koldkin@ukr.net")
@@ -85,7 +82,7 @@ if (WIN32)
 
     add_custom_command(
         TARGET ppm-generator POST_BUILD
-        COMMAND "${WINDEPLOYQT_EXECUTABLE}" --dir windeploy --compiler-runtime ${CMAKE_CURRENT_BINARY_DIR}/ppm-generator.exe
+        COMMAND "${WINDEPLOYQT_EXECUTABLE}" --dir windeploy --compiler-runtime ${ppm-generator_BINARY_DIR}/ppm-generator.exe
     )
 
     install(TARGETS ppm-generator RUNTIME DESTINATION .)

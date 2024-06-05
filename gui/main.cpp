@@ -21,22 +21,14 @@
 #include <QTranslator>
 #include <QLibraryInfo>
 #include <QLoggingCategory>
-
-
-QString qtTranslationsPath() {
-#if QT_VERSION_MAJOR >= 6
-	return QLibraryInfo::path(QLibraryInfo::TranslationsPath);
-#else
-	return QLibraryInfo::location(QLibraryInfo::TranslationsPath);
-#endif
-}
+#include <QtGlobal>
 
 int main(int argc, char *argv[])
 {
 	QApplication a(argc, argv);
 	a.setApplicationName("Arduino PPM Generator");
 	a.setOrganizationName("Alexandr Kolodkin");
-	a.setApplicationVersion("1.0.1");
+	a.setApplicationVersion("1.1.0");
 	a.setStyle(QStyleFactory::create("Fusion"));
 
 //	QLoggingCategory::setFilterRules(QStringLiteral("qt.modbus* = true"));
@@ -46,26 +38,34 @@ int main(int argc, char *argv[])
 		QLocale(),
 		QLatin1String("qt"),
 		QLatin1String("_"),
-		qtTranslationsPath()
+        QLibraryInfo::path(QLibraryInfo::TranslationsPath)
 	)) {
 		a.installTranslator(&qtTranslator);
 		qDebug() << "Qt translator installed.";
 	} else {
 		qDebug() << "Qt translator not found.";
-	}
+    }
 
-	QTranslator myTranslator;
-	if (myTranslator.load(
-		QLocale(),
-		QLatin1String("ppm"),
-		QLatin1String("_"),
-		QLatin1String(":/i18n/")
-	)) {
-		a.installTranslator(&myTranslator);
-		qDebug() << "Application translator installed.";
-	} else {
-		qDebug() << "Application translator not found.";
-	}
+    QStringList ApplicationTranslationPaths = {
+        qApp->applicationDirPath() + "/translations/",
+        qApp->applicationDirPath() + "/../share/ppm-generator/translations/"
+    };
+
+    QTranslator myTranslator;
+    for (auto ApplicationTranslationPath : ApplicationTranslationPaths) {
+        if (myTranslator.load(
+            QLocale(),
+            QLatin1String("ppm"),
+            QLatin1String("_"),
+            ApplicationTranslationPath
+        )) {
+            qDebug() << "Application translator installed from " << ApplicationTranslationPath << ".";
+            a.installTranslator(&myTranslator);
+            break;
+        } {
+            qDebug() << "Application translator not found in " << ApplicationTranslationPath << ".";
+        }
+    }
 
 	MainWindow w;
 	w.show();

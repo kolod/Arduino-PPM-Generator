@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=PPM Generator
+Icon=com.github.kolod.ppm-generator
+Terminal=false
+Exec=ppm-generator
+Categories=Utility
+Comment=GUI for the Arduino Nano sketch that allows you to generate a Pulse Position Modulation (PPM) signal

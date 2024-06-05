@@ -12,7 +12,7 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 
 find_package(Qt6 REQUIRED COMPONENTS Widgets Charts SerialBus SerialPort LinguistTools)
 
@@ -50,7 +50,7 @@ if(WIN32)
     list(APPEND PROJECT_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/resources.rc")
 endif()
 
-qt_add_executable(ppm-generator MANUAL_FINALIZATION ${PROJECT_SOURCES})
+qt_add_executable(ppm-generator WIN32 MANUAL_FINALIZATION ${PROJECT_SOURCES})
 qt_add_lupdate(ppm-generator TS_FILES ${TS_FILES} OPTIONS -locations relative -no-obsolete)
 qt_add_lrelease(ppm-generator TS_FILES ${TS_FILES} QM_FILES_OUTPUT_VARIABLE QM_FILES OPTIONS -compress -removeidentical)
 
@@ -72,10 +72,49 @@ if(QT_VERSION_MAJOR EQUAL 6)
 endif()
 
 # Installation
+set(CPACK_PACKAGE_CONTACT "oleksandr.koldkin@ukr.net")
+set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/kolod/Arduino-PPM-Generator")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "The GUI for Arduino Nano sketch that allows you to generate a PPM signal.")
+set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/../LICENSE")
+set(CPACK_RESOURCE_FILE_README "${PROJECT_SOURCE_DIR}/../README.md")
+set(CPACK_PACKAGE_CHECKSUM SHA256)
+
 if (WIN32)
-    install(TARGETS ppm-generator RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-    install(FILES ${VX_EXTRA_RESOURCE_FILES_RCC} DESTINATION ${CMAKE_INSTALL_BINDIR})
-    install(FILES ${QM_FILES} DESTINATION "${CMAKE_INSTALL_BINDIR}/translations" OPTIONAL)
+    get_filename_component(_qt6_bin "${_qt6_install_prefix}/../../bin" ABSOLUTE)
+    find_program(WINDEPLOYQT_EXECUTABLE NAMES windeployqt HINTS "${_qt6_bin}" REQUIRED)
+
+    add_custom_command(
+        TARGET ppm-generator POST_BUILD
+        COMMAND "${WINDEPLOYQT_EXECUTABLE}" --dir windeploy --compiler-runtime ${CMAKE_CURRENT_BINARY_DIR}/ppm-generator.exe
+    )
+
+    install(TARGETS ppm-generator RUNTIME DESTINATION .)
+    install(FILES ${QM_FILES} DESTINATION ./translations)
+    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/windeploy/ DESTINATION .)
+
+    set(CPACK_PACKAGE_NAME ${PROJECT_NAME})
+    set(CPACK_PACKAGE_INSTALL_DIRECTORY "ppm-generator")
+    set(CPACK_PACKAGE_INSTALL_REGISTRY_KEY "ppm-generator")
+    set(CPACK_PACKAGE_FILE_NAME "ppm-generator-win64")
+
+    set(CPACK_GENERATOR NSIS)
+    set(CPACK_NSIS_INSTALLED_ICON_NAME ppm-generator.exe)
+    set(CPACK_NSIS_INSTALL_ROOT "$PROGRAMFILES64")
+    set(CPACK_NSIS_PACKAGE_NAME "${CPACK_PACKAGE_NAME} ${CPACK_PACKAGE_VERSION} (Win64)")
+    set(CPACK_NSIS_DISPLAY_NAME "PPM Generator")
+    set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
+    set(CPACK_NSIS_EXECUTABLES_DIRECTORY ".")
+    set(CMAKE_CL_64 TRUE)   # This gets around a bug in the CPack installer name generation for MinGW 64-bit since 2.8
+
+    set(CPACK_NSIS_CREATE_ICONS_EXTRA
+        "CreateShortCut '$SMPROGRAMS\\\\$STARTMENU_FOLDER\\\\PPM Generator.lnk' '$INSTDIR\\\\ppm-generator.exe'"
+    )
+
+    set(CPACK_NSIS_DELETE_ICONS_EXTRA
+        "Delete '$SMPROGRAMS\\\\$START_MENU\\\\PPM Generator.lnk'"
+    )
+
+    include(CPack)
 
 else()
     include(GNUInstallDirs)
@@ -97,12 +136,6 @@ else()
     )
 
     list(JOIN DEBIAN_PACKAGE_DEPENDS ", " CPACK_DEBIAN_PACKAGE_DEPENDS)
-
-    set(CPACK_DEB_COMPONENT_INSTALL ON)
-    set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/kolod/Arduino-PPM-Generator")
-
-    set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/../LICENSE")
-    set(CPACK_RESOURCE_FILE_README "${PROJECT_SOURCE_DIR}/../README.md")
 
     set(CPACK_GENERATOR "DEB")
     set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Oleksandr Kolodkin <oleksandr.kolodkin@ukr.net>")

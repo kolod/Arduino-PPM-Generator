@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
 	QApplication a(argc, argv);
 	a.setApplicationName("Arduino PPM Generator");
 	a.setOrganizationName("Alexandr Kolodkin");
-	a.setApplicationVersion("1.0.1");
+	a.setApplicationVersion("1.1.0");
 	a.setStyle(QStyleFactory::create("Fusion"));
 
 //	QLoggingCategory::setFilterRules(QStringLiteral("qt.modbus* = true"));

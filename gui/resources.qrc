@@ -1,8 +1,6 @@
 <RCC>
     <qresource prefix="/">
         <file>firmware.bin</file>
-    </qresource>
-    <qresource prefix="/">
         <file>icons/connect.svg</file>
         <file>icons/disconnect.svg</file>
         <file>icons/update.svg</file>

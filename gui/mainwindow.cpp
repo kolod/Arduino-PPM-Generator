@@ -1,5 +1,5 @@
 ﻿//    Arduino PPM Generator
-//    Copyright (C) 2015-2021  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
+//    Copyright (C) 2015-...  Oleksandr Kolodkin <oleksandr.kolodkin@ukr.net>
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU General Public License as published by
@@ -16,7 +16,6 @@
 
 #include "mainwindow.h"
 #include <QtMath>
-
 #include <QDebug>
 
 MainWindow::MainWindow(QWidget *parent)
@@ -389,21 +388,21 @@ void MainWindow::enumeratePorts()
 	int id = 0;
 	inputPort->clear();
 	foreach (const QSerialPortInfo &info, QSerialPortInfo::availablePorts()) {
-		QString tooltip =
-		  QObject::tr(
-			"Port: %1\n"
-			"Location: %2\n"
-			"Description: %3\n"
-			"Manufacturer: %4\n"
-			"Vendor Identifier: %5\n"
-			"Product Identifier: %6"
-		  )
-		  .arg(info.portName())
-		  .arg(info.systemLocation())
-		  .arg(info.description())
-		  .arg(info.manufacturer())
-		  .arg(info.hasVendorIdentifier() ? QString::number(info.vendorIdentifier(), 16) : QString())
-		  .arg(info.hasProductIdentifier() ? QString::number(info.productIdentifier(), 16) : QString());
+        auto tooltip = tr(
+            "Port: %1\n"
+            "Location: %2\n"
+            "Description: %3\n"
+            "Manufacturer: %4\n"
+            "Vendor Identifier: %5\n"
+            "Product Identifier: %6"
+        ).arg(
+            info.portName(),
+            info.systemLocation(),
+            info.description(),
+            info.manufacturer(),
+            info.hasVendorIdentifier() ? QString::number(info.vendorIdentifier(), 16) : QString(),
+            info.hasProductIdentifier() ? QString::number(info.productIdentifier(), 16) : QString()
+        );
 
 		inputPort->addItem(info.portName());
 		inputPort->setItemData(id, QVariant(tooltip), Qt::ToolTipRole);
@@ -554,15 +553,22 @@ void MainWindow::check()
 //
 QPalette MainWindow::gradient(double value, double max)
 {
-	QColor color(Qt::white);
-	QPalette newPalete(palette());
+    auto oldPalete = palette();
+    auto newPalete(oldPalete);
 
-	if      (value <= max * 1.0) color = QColor(255,   0,   0);
-	else if (value <= max * 1.2) color = QColor(255, 119,   0);
-	else if (value <= max * 1.5) color = QColor(255, 208,   0);
-	else if (value <= max * 2.0) color = QColor(255, 255,   0);
+    QColor foreColor = oldPalete.color(QPalette::Text);
+    QColor backColor = oldPalete.color(QPalette::Base);
 
-	newPalete.setColor(QPalette::Base, color);
+    if      (value <= max * 1.2) backColor = QColor("red");
+    else if (value <= max * 1.5) backColor = QColor("orange");
+    else if (value <= max * 2.0) backColor = QColor("yellow");
+
+#if QT_VERSION >= QT_VERSION_CHECK(6,5,0)
+    if (backColor.lightnessF() >= 0.5) foreColor = QColor("black");
+#endif
+
+    newPalete.setColor(QPalette::Text, foreColor);
+    newPalete.setColor(QPalette::Base, backColor);
 	return newPalete;
 }
 

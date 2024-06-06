@@ -7,7 +7,8 @@ Sketch for Arduino Nano allows you to generate a PPM signal.
 It uses a hardware sixteen-bit timer.
 The pulse duration is adjusted with an accuracy of 0.0625 microseconds.
 
-![gui screenshot](https://raw.githubusercontent.com/kolod/Arduino-PPM-Generator/master/gui.png)
+![gui screenshot](https://raw.githubusercontent.com/kolod/Arduino-PPM-Generator/master/gui/data/images/gui-dark.png#gh-dark-mode-only)
+![gui screenshot](https://raw.githubusercontent.com/kolod/Arduino-PPM-Generator/master/gui/data/images/gui-light.png#gh-light-mode-only)
 
 ## Modbus registers
 | #   | Mode | Size (bytes) | Description                              |
@@ -22,5 +23,5 @@ The pulse duration is adjusted with an accuracy of 0.0625 microseconds.
 | ... |  ... | ...          | ...                                      |
 | n+7 |  RW  | 2            | Channel #n duration in the clock ticks   |
 
-![ppm](https://raw.githubusercontent.com/kolod/Arduino-PPM-Generator/master/ppm-dark.png#gh-dark-mode-only)
-![ppm](https://raw.githubusercontent.com/kolod/Arduino-PPM-Generator/master/ppm-light.png#gh-light-mode-only)
+![ppm](https://raw.githubusercontent.com/kolod/Arduino-PPM-Generator/master/gui/data/images/ppm-dark.png#gh-dark-mode-only)
+![ppm](https://raw.githubusercontent.com/kolod/Arduino-PPM-Generator/master/gui/data/images/ppm-light.png#gh-light-mode-only)

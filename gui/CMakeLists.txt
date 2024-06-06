@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.22)
 
 project(ppm-generator VERSION 1.1.0 LANGUAGES CXX)
 
@@ -7,14 +7,15 @@ set(PROJECT_DESCRIPTION "The GUI for the Arduino Nano sketch that allows you to 
 set(PROJECT_AUTHOR "Oleksandr Kolodkin")
 set(PROJECT_URL "https://github.com/kolod/Arduino-PPM-Generator")
 
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
-set(CMAKE_AUTOUIC ON)
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_STANDARD 17)
+# set(CMAKE_INCLUDE_CURRENT_DIR ON)
+# set(CMAKE_AUTOUIC ON)
+# set(CMAKE_AUTOMOC ON)
+# set(CMAKE_AUTORCC ON)
+# set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# set(CMAKE_CXX_STANDARD 17)
 
 find_package(Qt6 REQUIRED COMPONENTS Widgets Charts SerialBus SerialPort LinguistTools)
+qt_standard_project_setup()
 
 set(TS_FILES
     translations/ppm_uk.ts
@@ -77,17 +78,13 @@ set(CPACK_RESOURCE_FILE_README "${PROJECT_SOURCE_DIR}/../README.md")
 set(CPACK_PACKAGE_CHECKSUM SHA256)
 
 if (WIN32)
-    get_filename_component(_qt6_bin "${_qt6_install_prefix}/../../bin" ABSOLUTE)
-    find_program(WINDEPLOYQT_EXECUTABLE NAMES windeployqt HINTS "${_qt6_bin}" REQUIRED)
+    qt_generate_deploy_app_script(TARGET ppm-generator OUTPUT_SCRIPT deploy_script NO_UNSUPPORTED_PLATFORM_ERROR)
 
-    add_custom_command(
-        TARGET ppm-generator POST_BUILD
-        COMMAND "${WINDEPLOYQT_EXECUTABLE}" --dir windeploy --compiler-runtime ${ppm-generator_BINARY_DIR}/ppm-generator.exe
-    )
+    message(${deploy_script})
 
-    install(TARGETS ppm-generator RUNTIME DESTINATION .)
+    install(SCRIPT ${deploy_script})
+    install(TARGETS ppm-generator BUNDLE DESTINATION . RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
     install(FILES ${QM_FILES} DESTINATION ./translations)
-    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/windeploy/ DESTINATION .)
 
     set(CPACK_PACKAGE_NAME ${PROJECT_NAME})
     set(CPACK_PACKAGE_INSTALL_DIRECTORY "ppm-generator")
@@ -104,12 +101,15 @@ if (WIN32)
     set(CMAKE_CL_64 TRUE)   # This gets around a bug in the CPack installer name generation for MinGW 64-bit since 2.8
 
     set(CPACK_NSIS_CREATE_ICONS_EXTRA
-        "CreateShortCut '$SMPROGRAMS\\\\$STARTMENU_FOLDER\\\\PPM Generator.lnk' '$INSTDIR\\\\ppm-generator.exe'"
+        "CreateShortCut '$SMPROGRAMS\\\\$STARTMENU_FOLDER\\\\PPM Generator.lnk' '$INSTDIR\\\\bin\\\\ppm-generator.exe'"
     )
 
     set(CPACK_NSIS_DELETE_ICONS_EXTRA
         "Delete '$SMPROGRAMS\\\\$START_MENU\\\\PPM Generator.lnk'"
     )
+
+    message(${PROJECT_BINARY_DIR}/ppm-generator.exe)
+    message(${CMAKE_CURRENT_BINARY_DIR}/ppm-generator.exe)
 
     include(CPack)
 

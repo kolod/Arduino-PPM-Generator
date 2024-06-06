@@ -58,13 +58,14 @@ int main(int argc, char *argv[])
 		qDebug() << "Qt translator not found.";
     }
 
-    QStringList ApplicationTranslationPaths = {
+    const QStringList ApplicationTranslationPaths = {
         qApp->applicationDirPath() + "/translations/",
+        qApp->applicationDirPath() + "/../translations/",
         qApp->applicationDirPath() + "/../share/ppm-generator/translations/"
     };
 
     QTranslator myTranslator;
-    for (auto ApplicationTranslationPath : ApplicationTranslationPaths) {
+    for (const auto &ApplicationTranslationPath : ApplicationTranslationPaths) {
         if (myTranslator.load(
             QLocale(),
             QLatin1String("ppm"),

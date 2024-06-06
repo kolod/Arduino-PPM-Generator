@@ -1,7 +1,0 @@
-<RCC>
-    <qresource prefix="/">
-        <file>i18n/ppm_ru.qm</file>
-        <file>i18n/ppm_ua.qm</file>
-        <file>i18n/ppm_de.qm</file>
-    </qresource>
-</RCC>

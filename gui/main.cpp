@@ -1,5 +1,5 @@
 ﻿//    Arduino PPM Generator
-//    Copyright (C) 2015-2020  Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
+//    Copyright (C) 2015-...  Oleksandr Kolodkin <oleksandr.kolodkin@ukr.net>
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU General Public License as published by
@@ -23,6 +23,11 @@
 #include <QLoggingCategory>
 #include <QtGlobal>
 
+#ifndef NDEBUG
+#include <QLocale>
+#include <QDirIterator>
+#endif
+
 int main(int argc, char *argv[])
 {
 	QApplication a(argc, argv);
@@ -30,6 +35,13 @@ int main(int argc, char *argv[])
 	a.setOrganizationName("Alexandr Kolodkin");
 	a.setApplicationVersion("1.1.0");
 	a.setStyle(QStyleFactory::create("Fusion"));
+
+    #ifndef NDEBUG
+    qDebug() << QLocale::system() << QLocale::system().bcp47Name();
+
+    QDirIterator it(":", QDirIterator::Subdirectories);
+    while (it.hasNext()) qDebug() << it.next();
+    #endif
 
 //	QLoggingCategory::setFilterRules(QStringLiteral("qt.modbus* = true"));
 
@@ -46,13 +58,14 @@ int main(int argc, char *argv[])
 		qDebug() << "Qt translator not found.";
     }
 
-    QStringList ApplicationTranslationPaths = {
+    const QStringList ApplicationTranslationPaths = {
         qApp->applicationDirPath() + "/translations/",
+        qApp->applicationDirPath() + "/../translations/",
         qApp->applicationDirPath() + "/../share/ppm-generator/translations/"
     };
 
     QTranslator myTranslator;
-    for (auto ApplicationTranslationPath : ApplicationTranslationPaths) {
+    for (const auto &ApplicationTranslationPath : ApplicationTranslationPaths) {
         if (myTranslator.load(
             QLocale(),
             QLatin1String("ppm"),

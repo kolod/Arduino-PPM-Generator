@@ -22,6 +22,7 @@
 #include <QLibraryInfo>
 #include <QLoggingCategory>
 #include <QtGlobal>
+#include <QDebug>
 
 #ifndef NDEBUG
 #include <QLocale>
@@ -32,7 +33,7 @@ int main(int argc, char *argv[])
 {
 	QApplication a(argc, argv);
 	a.setApplicationName("Arduino PPM Generator");
-	a.setOrganizationName("Alexandr Kolodkin");
+	a.setOrganizationName("Oleksandr Kolodkin");
 	a.setApplicationVersion("1.1.0");
 	a.setStyle(QStyleFactory::create("Fusion"));
 
@@ -72,10 +73,10 @@ int main(int argc, char *argv[])
             QLatin1String("_"),
             ApplicationTranslationPath
         )) {
-            qDebug() << "Application translator installed from " << ApplicationTranslationPath << ".";
             a.installTranslator(&myTranslator);
+            qDebug() << "Application translator installed from " << ApplicationTranslationPath << ".";
             break;
-        } {
+        } else {
             qDebug() << "Application translator not found in " << ApplicationTranslationPath << ".";
         }
     }
